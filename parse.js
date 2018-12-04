@@ -5,15 +5,30 @@ const fs = require("fs");
 const unbend = require('unbend')
 
 
-exports.writeToJsonFile = (jsonFileName, fileName, extractedStrings) => {
+function getJsonDictObject(jsonFileName) {
     let fileContent = exports.readJsFileContent(jsonFileName);
     let jsonFileContent = JSON.parse(fileContent);
-    for(let index = 0; index < extractedStrings.length; index+=1){
-        let lineKey =  `${fileName}.${extractedStrings[index].type}.index(${index})`;
-        let lineValue = `${extractedStrings[index].value}`;
-        jsonFileContent[lineKey] = lineValue;
-    }
+    return jsonFileContent;
+}
+
+function insertNewEntryInJsonObject(fileName, extractedStrings, index, jsonFileContent) {
+    let stringKey = `${fileName}.${extractedStrings[index].type}.index(${index})`;
+    let stringValue = `${extractedStrings[index].value}`;
+    jsonFileContent[stringKey] = stringValue;
+}
+
+function writeToJsonFileWithIndentation(jsonFileName, jsonFileContent) {
     fs.writeFileSync(jsonFileName, JSON.stringify(jsonFileContent, null, 4));
+}
+
+exports.writeToJsonFile = (jsonFileName, fileName, extractedStrings) => {
+    let jsonFileContent = getJsonDictObject(jsonFileName);
+
+    for(let index = 0; index < extractedStrings.length; index+=1){
+        insertNewEntryInJsonObject(fileName, extractedStrings, index, jsonFileContent);
+    }
+
+    writeToJsonFileWithIndentation(jsonFileName, jsonFileContent);
 };
 
 exports.readJsFileContent = jsFileName => {
