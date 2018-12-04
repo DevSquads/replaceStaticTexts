@@ -33,6 +33,7 @@ class TestClass extends React.Component {
             expect(returnedStrings.length).to.eql(1);
             expect(returnedStrings[0]).to.eql('Hello, world!');
         });
+
         it('should extract strings inside a js file inside a render function', () => {
             let returnedStrings = parser.extractStrings(`import React from "react";
 class TestClass extends React.Component {
@@ -49,6 +50,36 @@ class TestClass extends React.Component {
             expect(returnedStrings.length).to.eql(2);
             expect(returnedStrings[0]).to.eql('Hello, world!');
             expect(returnedStrings[1]).to.eql('Another Text');
+        });
+
+        it('should write to json file with correct key', () => {
+            fs.writeFileSync('test.json', '{}');
+            let expectedKey = 'TestClass.JSXText.index(0)';
+            let testExtractedStrings = [{
+                type: 'JSXText',
+                value: 'Hello, world!'
+            }];
+
+            parser.writeToJsonFile('test.json', 'TestScreen', testExtractedStrings);
+
+            expect(fs.existsSync('test.json'));
+            let jsonFileContent = fs.readFileSync('test.json', 'utf8');
+            expect(jsonFileContent).to.eql('{\n    "TestScreen.JSXText.index(0)": "Hello, world!"\n}');
+        });
+
+        it('should write to json file with correct key', () => {
+            fs.writeFileSync('test.json', '{\n"AnotherTestScreen.JSXText.index(0)": "Just another text"\n}');
+            let expectedKey = 'TestClass.JSXText.index(0)';
+            let testExtractedStrings = [{
+                type: 'JSXText',
+                value: 'Hello, world!'
+            }];
+
+            parser.writeToJsonFile('test.json', 'TestScreen', testExtractedStrings);
+
+            expect(fs.existsSync('test.json'));
+            let jsonFileContent = fs.readFileSync('test.json', 'utf8');
+            expect(jsonFileContent).to.eql('{\n    "AnotherTestScreen.JSXText.index(0)": "Just another text",\n    "TestScreen.JSXText.index(0)": "Hello, world!"\n}');
         });
     })
 });

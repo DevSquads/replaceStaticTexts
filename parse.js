@@ -1,6 +1,20 @@
+
+
 const babelParser = require("@babel/core");
 const fs = require("fs");
 const unbend = require('unbend')
+
+
+exports.writeToJsonFile = (jsonFileName, fileName, extractedStrings) => {
+    let fileContent = exports.readJsFileContent(jsonFileName);
+    let jsonFileContent = JSON.parse(fileContent);
+    for(let index = 0; index < extractedStrings.length; index+=1){
+        let lineKey =  `${fileName}.${extractedStrings[index].type}.index(${index})`;
+        let lineValue = `${extractedStrings[index].value}`;
+        jsonFileContent[lineKey] = lineValue;
+    }
+    fs.writeFileSync(jsonFileName, JSON.stringify(jsonFileContent, null, 4));
+};
 
 exports.readJsFileContent = jsFileName => {
     return fs.readFileSync(jsFileName, 'utf8');
