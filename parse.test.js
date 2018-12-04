@@ -19,5 +19,36 @@ describe('Extract And Replace Script', () => {
 
             expect(returnedString).to.eql("Test String");
         });
+
+        it('should extract a string inside a Text component from a js file inside a render function', () => {
+            let returnedStrings = parser.extractStrings(`import React from "react";
+class TestClass extends React.Component {
+  render() {
+    return (
+      <Text>Hello, world!</Text>
+    );
+  }
+}`);
+
+            expect(returnedStrings.length).to.eql(1);
+            expect(returnedStrings[0]).to.eql('Hello, world!');
+        });
+        it('should extract strings inside a js file inside a render function', () => {
+            let returnedStrings = parser.extractStrings(`import React from "react";
+class TestClass extends React.Component {
+  render() {
+    return (
+    <View>    
+      <Text>Hello, world!</Text>
+      <View><Text>Another Text</Text></View>
+    </View>
+    );
+  }
+}`);
+
+            expect(returnedStrings.length).to.eql(2);
+            expect(returnedStrings[0]).to.eql('Hello, world!');
+            expect(returnedStrings[1]).to.eql('Another Text');
+        });
     })
 });
