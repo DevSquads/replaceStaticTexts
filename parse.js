@@ -10,14 +10,16 @@ const JSXTEXT_TYPE = 'JSXText';
 const JSX_EXPERESSION_TYPE = 'JSXExpressionContainer';
 
 
-function modifyAbstractSyntaxTree(extractedStringsWithKeyAndPath, parsedTree, stringType) {
+const modifyAbstractSyntaxTree = (extractedStringsWithKeyAndPath, parsedTree, stringType) => {
     for (let [_, obj] of Object.entries(extractedStringsWithKeyAndPath)) {
         babelTraverse.default(parsedTree, {
             enter(path) {
                 if (stringType === JSXTEXT_TYPE) {
                     if (path.type === stringType && exports.cleanUpExtractedString(path.node.value) === obj.value) {
                         path.node.value = `{I18n.t("${obj.key}")}`;
+                        return;
                     }
+
                 } else {
                     if (path.type === stringType) {
                         let parentNode = path.findParent(path => path.type === 'JSXElement');
@@ -25,17 +27,18 @@ function modifyAbstractSyntaxTree(extractedStringsWithKeyAndPath, parsedTree, st
                         let expressionValueNode = parentNode.get(stringPath);
                         if (expressionValueNode.node && exports.cleanUpExtractedString(expressionValueNode.node.value) === obj.value) {
                             expressionValueNode.node.extra.raw = `I18n.t("${obj.key}")`;
+                            return;
                         }
                     }
                 }
             }
         })
     }
-}
+};
 
-function writeToFile(jsFileName, newFileContent) {
-    fs.writeFileSync(jsFileName, newFileContent.code);
-}
+const writeToFile = (jsFileName, newFileContent) => {
+    fs.writeFileSync('output/' + jsFileName, newFileContent.code);
+};
 
 exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, stringType) => {
     let extractedStrings = exports.extractStrings(fileContent, stringType);
@@ -46,25 +49,24 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, stringT
 
     let newFileContent = babelGenerator.default(parsedTree, {sourceMap: true}, fileContent);
     writeToFile(jsFileName, newFileContent);
-    fs.writeFileSync('output.json', JSON.stringify(parsedTree));
     return newFileContent.code;
 };
 
 
-function getJsonDictObject(jsonFileName) {
+const getJsonDictObject = jsonFileName => {
     let fileContent = exports.readJsFileContent(jsonFileName);
     return JSON.parse(fileContent);
-}
+};
 
-function getStringKey(fileName, extractedStrings, index) {
+const getStringKey = (fileName, extractedStrings, index) => {
     return `${fileName.replace('.js', '')}.${extractedStrings[index].type}.index(${index})`;
-}
+};
 
-function getStringValue(extractedStrings, index) {
+const getStringValue = (extractedStrings, index) => {
     return `${extractedStrings[index].value}`;
-}
+};
 
-function insertNewEntryInJsonObject(fileName, extractedStrings, index, jsonFileContent, extractedStringsWithKeyAndPath) {
+const insertNewEntryInJsonObject = (fileName, extractedStrings, index, jsonFileContent, extractedStringsWithKeyAndPath) => {
     let stringKey = getStringKey(fileName, extractedStrings, index);
     let stringValue = getStringValue(extractedStrings, index);
 
@@ -75,11 +77,11 @@ function insertNewEntryInJsonObject(fileName, extractedStrings, index, jsonFileC
         path: extractedStrings[index].path,
         value: stringValue
     });
-}
+};
 
-function writeToJsonFileWithIndentation(jsonFileName, jsonFileContent) {
+writeToJsonFileWithIndentation = (jsonFileName, jsonFileContent) => {
     fs.writeFileSync(jsonFileName, JSON.stringify(jsonFileContent, null, 4));
-}
+};
 
 exports.writeToJsonFile = (jsonFileName, jsFileName, extractedStrings) => {
     let extractedStringsWithKeyAndPath = [];
@@ -101,44 +103,59 @@ exports.cleanUpExtractedString = extractedString => {
     return extractedString.replace(/[\t\n]+/gm, ' ').trim();
 };
 
-function getParsedTree(jsFileContent) {
+const getParsedTree = jsFileContent => {
     return babelParser.parse(jsFileContent, {
         presets: ["@babel/preset-react"],
         plugins: ["@babel/plugin-proposal-class-properties"]
     });
-}
+};
 
-function getFlatParseTree(jsFileContent) {
+const getFlatParseTree = jsFileContent => {
     let parserTree = getParsedTree(jsFileContent);
-    fs.writeFileSync('output.json', JSON.stringify(parserTree));
+    fs.writeFileSync('output-tree.json', JSON.stringify(parserTree));
     let flatParseTree = unbend(parserTree, {separator: '.', skipFirstSeparator: true, parseArray: true});
+    fs.writeFileSync('output.json', JSON.stringify(flatParseTree));
     return flatParseTree;
-}
+};
 
-function constructStringObject(textKey, extractedText, stringType) {
+const constructStringObject = (textKey, extractedText, stringType) => {
     return {
         path: textKey.replace('.value', ''),
         type: stringType,
         value: extractedText
     };
-}
+};
 
-function getAllJSXStringsWithTypeAndPath(flatParseTree) {
-    fs.writeFileSync('output.json', JSON.stringify(flatParseTree))
+const modifyNodeKeyAndGetNodeValue = (key, originalPath, replacementPath, flatParseTree) => {
+    let textKey = key.replace(originalPath, replacementPath);
+    let extractedText = flatParseTree[textKey];
+    return {textKey, extractedText};
+};
+
+const getAllJSXStringsWithTypeAndPath = flatParseTree => {
     let extractedStringsWithTypeAndPath = [];
     for (let [key, value] of Object.entries(flatParseTree)) {
         if (value === JSXTEXT_TYPE) {
-            let textKey = key.replace("type", "value");
-            let extractedText = flatParseTree[textKey];
+            let {textKey, extractedText} = modifyNodeKeyAndGetNodeValue(
+                key,
+                'type',
+                'value',
+                flatParseTree
+            );
 
             extractedText = exports.cleanUpExtractedString(extractedText);
             if (extractedText.length !== 0) {
                 extractedStringsWithTypeAndPath.push(constructStringObject(textKey, extractedText, JSXTEXT_TYPE));
             }
-        } else if (value === JSX_EXPERESSION_TYPE) {
-            let textKey = key.replace("type", "expression.value");
-            let extractedText = flatParseTree[textKey];
-            if(textKey in flatParseTree && extractedText && typeof extractedText === "string") {
+        } else if (value === JSX_EXPERESSION_TYPE && !key.includes('attribute')) {
+            let {textKey, extractedText} = modifyNodeKeyAndGetNodeValue(
+                key,
+                'type',
+                'expression.value',
+                flatParseTree
+            );
+
+            if (textKey in flatParseTree && extractedText && typeof extractedText === "string") {
                 extractedText = exports.cleanUpExtractedString(extractedText);
                 if (extractedText.length !== 0) {
                     extractedStringsWithTypeAndPath.push(constructStringObject(textKey, extractedText, JSX_EXPERESSION_TYPE));
@@ -147,9 +164,9 @@ function getAllJSXStringsWithTypeAndPath(flatParseTree) {
         }
     }
     return extractedStringsWithTypeAndPath;
-}
+};
 
-exports.extractStrings = (jsFileContent) => {
+exports.extractStrings = jsFileContent => {
     let flatParseTree = getFlatParseTree(jsFileContent);
     return getAllJSXStringsWithTypeAndPath(flatParseTree);
 };

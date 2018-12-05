@@ -40,6 +40,13 @@ describe('Extract And Replace Script', () => {
             }
         });
 
+        after(() => {
+            let files = fs.readdirSync('output');
+            for (let i = 0; i < files.length; i++) {
+                fs.unlinkSync('output/' + files[i]);
+            }
+        });
+
         it('should read a js file', () => {
             let jsFileContent = 'Hello, world!';
             fs.writeFileSync(jsTestFileName, jsFileContent);
@@ -166,7 +173,7 @@ describe('Extract And Replace Script', () => {
             expect(jsFileContentWithReplacedKeys).to.eql(modifiedFileContent);
         });
 
-        it('shouldn\'t throw an exception when a non literal string expression container is met', () => {
+        it('should not throw an exception when a non literal string expression container is met', () => {
             let stringType = 'JSXExpressionContainer';
             let originalFileContentWithANonLiteralStringContainer = `import React from "react";\n` +
                 `class TestClass extends React.Component {\n` +
@@ -181,6 +188,7 @@ describe('Extract And Replace Script', () => {
                 `  }\n` +
                 `}`;
             fs.writeFileSync(jsonTestFileName, '{}');
+            fs.writeFileSync('TestScreen.js', '');
 
             expect(() => {
                 parser.replaceStringsWithKeys(
@@ -191,7 +199,7 @@ describe('Extract And Replace Script', () => {
             }).to.not.throw();
         });
 
-        it('shouldn\'t throw an exception when an expression with a non string value is met', () => {
+        it('should not throw an exception when an expression with a non string value is met', () => {
             let stringType = 'JSXExpressionContainer';
             let originalFileContentWithANonLiteralStringContainer = `import React from "react";\n` +
                 `class TestClass extends React.Component {\n` +
@@ -215,6 +223,31 @@ describe('Extract And Replace Script', () => {
                     jsonTestFileName,
                     stringType)
             }).to.not.throw();
-        })
+        });
+
+        it('should not retrieve text inside a style expression', () => {
+            let originalFileContentWithAStyleExpression = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `    <View>\n` +
+                `   {someCondition && console.log('test')}` +
+                `      <Text style={"center"}>{"Hello, world!"}</Text>\n` +
+                `      <View><Text>{"Another Text"}</Text></View>\n` +
+                `      {120}\n` +
+                `    </View>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            let extractedStrings = parser.extractStrings(originalFileContentWithAStyleExpression);
+
+            expect(extractedStrings[0]).to.not.deep.contain({
+                "path": "program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.0.expression.value",
+                "type": "JSXExpressionContainer",
+                "value": "center"
+            });
+        });
     })
 });
