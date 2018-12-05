@@ -1,9 +1,30 @@
-
-
 const babelParser = require("@babel/core");
+const babelTraverse = require("@babel/traverse");
+const babelGenerator = require('@babel/generator');
 const fs = require("fs");
 const unbend = require('unbend')
 
+exports.replaceJsxStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
+    //extract JSXText strings
+    let extractedStrings = exports.extractStrings(fileContent);
+    //write to json file, get keys with corresponding values
+    let keysAndPathsOfExtractedStrings = exports.writeToJsonFile(jsonFileName, jsFileName, extractedStrings);
+    //traverse tree with each string's path, replacing it with the corresponding key
+    let parsedTree = getParsedTree(fileContent);
+    for (let [index, obj] of Object.entries(keysAndPathsOfExtractedStrings)) {
+        babelTraverse.default(parsedTree, {
+            enter(path) {
+                if(path.type === 'JSXText' && exports.cleanUpExtractedString(path.node.value) === obj.value) {
+                    path.node.value = `{I18n.t("${obj.key}")}`;
+                }
+            }
+        })
+    }
+    let newFileContent = babelGenerator.default(parsedTree,{sourceMap: true}, fileContent);
+
+    fs.writeFileSync(jsFileName, newFileContent.code);
+    return newFileContent.code;
+};
 
 function getJsonDictObject(jsonFileName) {
     let fileContent = exports.readJsFileContent(jsonFileName);
@@ -11,24 +32,31 @@ function getJsonDictObject(jsonFileName) {
     return jsonFileContent;
 }
 
-function insertNewEntryInJsonObject(fileName, extractedStrings, index, jsonFileContent) {
-    let stringKey = `${fileName}.${extractedStrings[index].type}.index(${index})`;
+function insertNewEntryInJsonObject(fileName, extractedStrings, index, jsonFileContent, keysAndPathsOfExtractedStrings) {
+    let stringKey = `${fileName.replace('.js','')}.${extractedStrings[index].type}.index(${index})`;
     let stringValue = `${extractedStrings[index].value}`;
     jsonFileContent[stringKey] = stringValue;
+    keysAndPathsOfExtractedStrings.push({
+        key: stringKey,
+        path: extractedStrings[index].path,
+        value: stringValue
+    });
 }
 
 function writeToJsonFileWithIndentation(jsonFileName, jsonFileContent) {
     fs.writeFileSync(jsonFileName, JSON.stringify(jsonFileContent, null, 4));
 }
 
-exports.writeToJsonFile = (jsonFileName, fileName, extractedStrings) => {
+exports.writeToJsonFile = (jsonFileName, jsFileName, extractedStrings) => {
+    let keysAndPathsOfExtractedStrings = [];
     let jsonFileContent = getJsonDictObject(jsonFileName);
 
-    for(let index = 0; index < extractedStrings.length; index+=1){
-        insertNewEntryInJsonObject(fileName, extractedStrings, index, jsonFileContent);
+    for (let index = 0; index < extractedStrings.length; index += 1) {
+        insertNewEntryInJsonObject(jsFileName, extractedStrings, index, jsonFileContent, keysAndPathsOfExtractedStrings);
     }
 
     writeToJsonFileWithIndentation(jsonFileName, jsonFileContent);
+    return keysAndPathsOfExtractedStrings;
 };
 
 exports.readJsFileContent = jsFileName => {
@@ -39,11 +67,15 @@ exports.cleanUpExtractedString = extractedString => {
     return extractedString.replace(/[\t\n]+/gm, ' ').trim();
 };
 
-function getFlatParseTree(jsFileContent) {
-    let parserTree = babelParser.parse(jsFileContent, {
+function getParsedTree(jsFileContent) {
+    return babelParser.parse(jsFileContent, {
         presets: ["@babel/preset-react"],
         plugins: ["@babel/plugin-proposal-class-properties"]
     });
+}
+
+function getFlatParseTree(jsFileContent) {
+    let parserTree = getParsedTree(jsFileContent);
     let flatParseTree = unbend(parserTree, {separator: '.', skipFirstSeparator: true, parseArray: true});
     return flatParseTree;
 }
@@ -55,8 +87,12 @@ function getAllTextComponentsValues(flatParseTree) {
             let textKey = key.replace("type", "value");
             let extractedText = flatParseTree[textKey];
             extractedText = exports.cleanUpExtractedString(extractedText);
-            if(extractedText.length != 0) {
-                extractedStrings.push(extractedText);
+            if (extractedText.length !== 0) {
+                extractedStrings.push({
+                    path: textKey.replace('.value', ''),
+                    type: 'JSXText',
+                    value: extractedText
+                });
             }
         }
     }
