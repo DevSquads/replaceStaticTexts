@@ -99,19 +99,24 @@ function getFlatParseTree(jsFileContent) {
     return flatParseTree;
 }
 
+function constructStringObject(textKey, extractedText) {
+    return {
+        path: textKey.replace('.value', ''),
+        type: JSXTEXT_TYPE,
+        value: extractedText
+    };
+}
+
 function getAllStringsWithTypeAndPath(flatParseTree) {
     let extractedStringsWithTypeAndPath = [];
     for (let [key, value] of Object.entries(flatParseTree)) {
         if (value === JSXTEXT_TYPE) {
             let textKey = key.replace("type", "value");
             let extractedText = flatParseTree[textKey];
+
             extractedText = exports.cleanUpExtractedString(extractedText);
             if (extractedText.length !== 0) {
-                extractedStringsWithTypeAndPath.push({
-                    path: textKey.replace('.value', ''),
-                    type: JSXTEXT_TYPE,
-                    value: extractedText
-                });
+                extractedStringsWithTypeAndPath.push(constructStringObject(textKey, extractedText));
             }
         }
     }
@@ -122,3 +127,5 @@ exports.extractStrings = jsFileContent => {
     let flatParseTree = getFlatParseTree(jsFileContent);
     return getAllStringsWithTypeAndPath(flatParseTree);
 };
+
+
