@@ -5,13 +5,11 @@ const fs = require("fs");
 const unbend = require('unbend')
 
 exports.replaceJsxStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
-    //extract JSXText strings
     let extractedStrings = exports.extractStrings(fileContent);
-    //write to json file, get keys with corresponding values
     let keysAndPathsOfExtractedStrings = exports.writeToJsonFile(jsonFileName, jsFileName, extractedStrings);
-    //traverse tree with each string's path, replacing it with the corresponding key
     let parsedTree = getParsedTree(fileContent);
-    for (let [index, obj] of Object.entries(keysAndPathsOfExtractedStrings)) {
+
+    for (let [_, obj] of Object.entries(keysAndPathsOfExtractedStrings)) {
         babelTraverse.default(parsedTree, {
             enter(path) {
                 if(path.type === 'JSXText' && exports.cleanUpExtractedString(path.node.value) === obj.value) {
@@ -20,8 +18,8 @@ exports.replaceJsxStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
             }
         })
     }
-    let newFileContent = babelGenerator.default(parsedTree,{sourceMap: true}, fileContent);
 
+    let newFileContent = babelGenerator.default(parsedTree,{sourceMap: true}, fileContent);
     fs.writeFileSync(jsFileName, newFileContent.code);
     return newFileContent.code;
 };
