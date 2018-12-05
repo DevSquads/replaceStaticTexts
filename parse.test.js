@@ -4,19 +4,33 @@ const fs = require('fs');
 
 describe('Extract And Replace Script', () => {
     describe('Extraction', () => {
-        let originalFileContent = `import React from "react";
-class TestClass extends React.Component {
-  render() {
-    return (
-    <View>    
-      <Text>Hello, world!</Text>
-      <View><Text>Another Text</Text></View>
-    </View>
-    );
-  }
-}`;
+        let originalFileContentWithJSXText = `import React from "react";\n` +
+            `class TestClass extends React.Component {\n` +
+            `  render() {\n` +
+            `    return (\n` +
+            `    <View>\n` +
+            `      <Text>Hello, world!</Text>\n` +
+            `      <View><Text>Another Text</Text></View>\n` +
+            `    </View>\n` +
+            `    );\n` +
+            `  }\n` +
+            `}`;
+
+        let originalFileContentWithExpressionText = `import React from "react";\n` +
+            `class TestClass extends React.Component {\n` +
+            `  render() {\n` +
+            `    return (\n` +
+            `    <View>\n` +
+            `      <Text>{"Hello, world!"}</Text>\n` +
+            `      <View><Text>{"Another Text"}</Text></View>\n` +
+            `    </View>\n` +
+            `    );\n` +
+            `  }\n` +
+            `}`;
+
         let jsonTestFileName = 'test.json';
         let jsTestFileName = 'test.js';
+
         afterEach(() => {
             if (fs.existsSync(jsonTestFileName)) {
                 fs.unlinkSync(jsonTestFileName);
@@ -25,6 +39,7 @@ class TestClass extends React.Component {
                 fs.unlinkSync(jsTestFileName);
             }
         });
+
         it('should read a js file', () => {
             let jsFileContent = 'Hello, world!';
             fs.writeFileSync(jsTestFileName, jsFileContent);
@@ -36,20 +51,20 @@ class TestClass extends React.Component {
             fs.unlinkSync(jsTestFileName);
         });
 
-        it('should read a js file without indentation', () => {
+        it('should clean up the extracted string from all tabs and newlines', () => {
             let returnedString = parser.cleanUpExtractedString("\t\tTest\n\t\tString\n");
             expect(returnedString).to.eql("Test String");
         });
 
         it('should extract a string inside a Text component from a js file inside a render function', () => {
-            let jsFileContent = `import React from "react";
-class TestClass extends React.Component {
-  render() {
-    return (
-      <Text>Hello, world!</Text>
-    );
-  }
-}`;
+            let jsFileContent = `import React from "react";` +
+                `class TestClass extends React.Component {` +
+                `  render() {` +
+                `    return (` +
+                `          <Text>Hello, world!</Text>` +
+                `    );` +
+                `  }` +
+                `}`;
             let returnedStrings = parser.extractStrings(jsFileContent);
 
             expect(returnedStrings.length).to.eql(1);
@@ -61,7 +76,7 @@ class TestClass extends React.Component {
         });
 
         it('should extract strings inside a js file inside a render function', () => {
-            let returnedStrings = parser.extractStrings(originalFileContent);
+            let returnedStrings = parser.extractStrings(originalFileContentWithJSXText);
 
             expect(returnedStrings.length).to.eql(2);
             expect(returnedStrings[0]).to.eql({
@@ -111,24 +126,95 @@ class TestClass extends React.Component {
                 ' "TestScreen.JSXText.index(0)": "Hello, world!"\n}');
         });
 
-        it('should replace the extracted jsx strings with generated key', () => {
-            let modifiedFileContent = `import React from "react";
-
-class TestClass extends React.Component {
-  render() {
-    return <View>    
-      <Text>{I18n.t("TestScreen.JSXText.index(0)")}</Text>
-      <View><Text>{I18n.t("TestScreen.JSXText.index(1)")}</Text></View>
-    </View>;
-  }
-
-}`;
+        it('should replace the extracted JSXText strings with generated key', () => {
+            let stringType = 'JSXText';
+            let modifiedFileContent = `import React from "react";\n` +
+                `\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return <View>\n` +
+                `      <Text>{I18n.t("TestScreen.JSXText.index(0)")}</Text>\n` +
+                `      <View><Text>{I18n.t("TestScreen.JSXText.index(1)")}</Text></View>\n` +
+                `    </View>;\n` +
+                `  }\n` +
+                `\n` +
+                `}`;
             fs.writeFileSync(jsonTestFileName, '{}');
 
-            let jsFileContentWithReplacedKeys = parser.replaceJsxStringsWithKeys(originalFileContent, 'TestScreen.js', jsonTestFileName);
+            let jsFileContentWithReplacedKeys = parser.replaceStringsWithKeys(originalFileContentWithJSXText, 'TestScreen.js', jsonTestFileName, stringType);
 
             expect(jsFileContentWithReplacedKeys).to.eql(modifiedFileContent);
         });
 
+        it('should replace the extracted ExpressionText strings with generated key', () => {
+            let stringType = 'JSXExpressionContainer';
+            let modifiedFileContent = `import React from "react";\n` +
+                `\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return <View>\n` +
+                `      <Text>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>\n` +
+                `      <View><Text>{I18n.t("TestScreen.JSXExpressionContainer.index(1)")}</Text></View>\n` +
+                `    </View>;\n` +
+                `  }\n` +
+                `\n` +
+                `}`;
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            let jsFileContentWithReplacedKeys = parser.replaceStringsWithKeys(originalFileContentWithExpressionText, 'TestScreen.js', jsonTestFileName, stringType);
+
+            expect(jsFileContentWithReplacedKeys).to.eql(modifiedFileContent);
+        });
+
+        it('shouldn\'t throw an exception when a non literal string expression container is met', () => {
+            let stringType = 'JSXExpressionContainer';
+            let originalFileContentWithANonLiteralStringContainer = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `    <View>\n` +
+                `   {someCondition && console.log('test')}` +
+                `      <Text>{"Hello, world!"}</Text>\n` +
+                `      <View><Text>{"Another Text"}</Text></View>\n` +
+                `    </View>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            expect(() => {
+                parser.replaceStringsWithKeys(
+                    originalFileContentWithANonLiteralStringContainer,
+                    'TestScreen.js',
+                    jsonTestFileName,
+                    stringType)
+            }).to.not.throw();
+        });
+
+        it('shouldn\'t throw an exception when an expression with a non string value is met', () => {
+            let stringType = 'JSXExpressionContainer';
+            let originalFileContentWithANonLiteralStringContainer = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `    <View>\n` +
+                `   {someCondition && console.log('test')}` +
+                `      <Text>{"Hello, world!"}</Text>\n` +
+                `      <View><Text>{"Another Text"}</Text></View>\n` +
+                `      {120}\n` +
+                `    </View>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            expect(() => {
+                parser.replaceStringsWithKeys(
+                    originalFileContentWithANonLiteralStringContainer,
+                    'TestScreen.js',
+                    jsonTestFileName,
+                    stringType)
+            }).to.not.throw();
+        })
     })
 });
