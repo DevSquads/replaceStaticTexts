@@ -4,37 +4,58 @@ const babelGenerator = require('@babel/generator');
 const fs = require("fs");
 const unbend = require('unbend')
 
-exports.replaceJsxStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
-    let extractedStrings = exports.extractStrings(fileContent);
-    let keysAndPathsOfExtractedStrings = exports.writeToJsonFile(jsonFileName, jsFileName, extractedStrings);
-    let parsedTree = getParsedTree(fileContent);
 
-    for (let [_, obj] of Object.entries(keysAndPathsOfExtractedStrings)) {
+
+const JSXTEXT_TYPE = 'JSXText';
+
+function modifyAbstractSyntaxTree(extractedStringsWithKeyAndPath, parsedTree) {
+    for (let [_, obj] of Object.entries(extractedStringsWithKeyAndPath)) {
         babelTraverse.default(parsedTree, {
             enter(path) {
-                if(path.type === 'JSXText' && exports.cleanUpExtractedString(path.node.value) === obj.value) {
+                if (path.type === JSXTEXT_TYPE && exports.cleanUpExtractedString(path.node.value) === obj.value) {
                     path.node.value = `{I18n.t("${obj.key}")}`;
                 }
             }
         })
     }
+}
+
+function writeToFile(jsFileName, newFileContent) {
+    fs.writeFileSync(jsFileName, newFileContent.code);
+}
+
+exports.replaceJsxStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
+    let extractedStrings = exports.extractStrings(fileContent);
+    let extractedStringsWithKeyAndPath = exports.writeToJsonFile(jsonFileName, jsFileName, extractedStrings);
+    let parsedTree = getParsedTree(fileContent);
+
+    modifyAbstractSyntaxTree(extractedStringsWithKeyAndPath, parsedTree);
 
     let newFileContent = babelGenerator.default(parsedTree,{sourceMap: true}, fileContent);
-    fs.writeFileSync(jsFileName, newFileContent.code);
+    writeToFile(jsFileName, newFileContent);
     return newFileContent.code;
 };
 
 function getJsonDictObject(jsonFileName) {
     let fileContent = exports.readJsFileContent(jsonFileName);
-    let jsonFileContent = JSON.parse(fileContent);
-    return jsonFileContent;
+    return JSON.parse(fileContent);
 }
 
-function insertNewEntryInJsonObject(fileName, extractedStrings, index, jsonFileContent, keysAndPathsOfExtractedStrings) {
-    let stringKey = `${fileName.replace('.js','')}.${extractedStrings[index].type}.index(${index})`;
-    let stringValue = `${extractedStrings[index].value}`;
+function getStringKey(fileName, extractedStrings, index) {
+    return `${fileName.replace('.js', '')}.${extractedStrings[index].type}.index(${index})`;
+}
+
+function getStringValue(extractedStrings, index) {
+    return `${extractedStrings[index].value}`;
+}
+
+function insertNewEntryInJsonObject(fileName, extractedStrings, index, jsonFileContent, extractedStringsWithKeyAndPath) {
+    let stringKey = getStringKey(fileName, extractedStrings, index);
+    let stringValue = getStringValue(extractedStrings, index);
+
     jsonFileContent[stringKey] = stringValue;
-    keysAndPathsOfExtractedStrings.push({
+
+    extractedStringsWithKeyAndPath.push({
         key: stringKey,
         path: extractedStrings[index].path,
         value: stringValue
@@ -46,15 +67,15 @@ function writeToJsonFileWithIndentation(jsonFileName, jsonFileContent) {
 }
 
 exports.writeToJsonFile = (jsonFileName, jsFileName, extractedStrings) => {
-    let keysAndPathsOfExtractedStrings = [];
+    let extractedStringsWithKeyAndPath = [];
     let jsonFileContent = getJsonDictObject(jsonFileName);
 
     for (let index = 0; index < extractedStrings.length; index += 1) {
-        insertNewEntryInJsonObject(jsFileName, extractedStrings, index, jsonFileContent, keysAndPathsOfExtractedStrings);
+        insertNewEntryInJsonObject(jsFileName, extractedStrings, index, jsonFileContent, extractedStringsWithKeyAndPath);
     }
 
     writeToJsonFileWithIndentation(jsonFileName, jsonFileContent);
-    return keysAndPathsOfExtractedStrings;
+    return extractedStringsWithKeyAndPath;
 };
 
 exports.readJsFileContent = jsFileName => {
@@ -78,46 +99,26 @@ function getFlatParseTree(jsFileContent) {
     return flatParseTree;
 }
 
-function getAllTextComponentsValues(flatParseTree) {
-    let extractedStrings = [];
+function getAllStringsWithTypeAndPath(flatParseTree) {
+    let extractedStringsWithTypeAndPath = [];
     for (let [key, value] of Object.entries(flatParseTree)) {
-        if (value === "JSXText") {
+        if (value === JSXTEXT_TYPE) {
             let textKey = key.replace("type", "value");
             let extractedText = flatParseTree[textKey];
             extractedText = exports.cleanUpExtractedString(extractedText);
             if (extractedText.length !== 0) {
-                extractedStrings.push({
+                extractedStringsWithTypeAndPath.push({
                     path: textKey.replace('.value', ''),
-                    type: 'JSXText',
+                    type: JSXTEXT_TYPE,
                     value: extractedText
                 });
             }
         }
     }
-    return extractedStrings;
+    return extractedStringsWithTypeAndPath;
 }
 
 exports.extractStrings = jsFileContent => {
     let flatParseTree = getFlatParseTree(jsFileContent);
-    return getAllTextComponentsValues(flatParseTree);
+    return getAllStringsWithTypeAndPath(flatParseTree);
 };
-
-
-// function treeTaverseRecursive(treeJsonObject)
-// {
-//     for (let node in treeJsonObject)
-//     {
-//         if (typeof treeJsonObject[node] == "object" && treeJsonObject[node] !== null) {
-//             treeTaverseRecursive(treeJsonObject[node]);
-//         }
-//         // do something...
-//     }
-// }
-// let filePath = "/Users/omar/Desktop/Work/shapa-react-native/src/components/missions/ActiveMission.js";
-//
-// let code = fs.readFileSync(filePath, 'utf8');
-// let parserOutput = babelParser.parse(code, {
-//     presets: ["@babel/preset-react"],
-//     plugins: ["@babel/plugin-proposal-class-properties"]
-// });
-// console.log(JSON.stringify(parserOutput));
