@@ -10,8 +10,6 @@ const JSX_EXPERESSION_TYPE = 'JSXExpressionContainer';
 const JSX_ATTRIBUTE_TYPE = 'JSXAttribute';
 
 const modifyAbstractSyntaxTree = (extractedStringsWithKeyAndPath, parsedTree, stringType) => {
-
-
     for (let [_, obj] of Object.entries(extractedStringsWithKeyAndPath)) {
         babelTraverse.default(parsedTree, {
             JSXText(path) {
@@ -33,7 +31,7 @@ const modifyAbstractSyntaxTree = (extractedStringsWithKeyAndPath, parsedTree, st
             JSXOpeningElement(path) {
                 path.traverse({
                     JSXAttribute(path) {
-                        if(path.name === 'title') {
+                        if (path.name === 'title') {
                             path.traverse({
                                 StringLiteral(path) {
                                     console.log(path);
@@ -100,10 +98,9 @@ exports.writeToJsonFile = (jsonFileName, jsFileName, extractedStrings) => {
     let jsxTypeCount = {};
 
     for (let index = 0; index < extractedStrings.length; index += 1) {
-        if(extractedStrings[index].type in jsxTypeCount) {
+        if (extractedStrings[index].type in jsxTypeCount) {
             jsxTypeCount[extractedStrings[index].type] += 1;
-        }
-        else {
+        } else {
             jsxTypeCount[extractedStrings[index].type] = 1;
         }
         insertNewEntryInJsonObject(jsFileName, extractedStrings, index, jsonFileContent, extractedStringsWithKeyAndPath, jsxTypeCount[extractedStrings[index].type]);
@@ -150,22 +147,21 @@ const modifyNodeKeyAndGetNodeValue = (key, originalPath, replacementPath, flatPa
     return {textKey, extractedText};
 };
 
-const getAllJSXStringsWithTypeAndPath = (flatParseTree) => {
+const getAllJSXStringsWithTypeAndPath = (flatParseTree, jsFileContent) => {
     let extractedStringsWithTypeAndPath = [];
-    for (let [key, value] of Object.entries(flatParseTree)) {
-        if (value === JSX_TEXT_TYPE) {
-            let {textKey, extractedText} = modifyNodeKeyAndGetNodeValue(
-                key,
-                'type',
-                'value',
-                flatParseTree
-            );
 
-            extractedText = exports.cleanUpExtractedString(extractedText);
-            if (extractedText.length !== 0) {
-                extractedStringsWithTypeAndPath.push(constructStringObject(textKey, extractedText, JSX_TEXT_TYPE));
+    let parsedTree = getParsedTree(jsFileContent);
+    babelTraverse.default(parsedTree, {
+            JSXText(path) {
+                if (exports.cleanUpExtractedString(path.node.value).length !== 0) {
+                    let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                    extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value, JSX_TEXT_TYPE));
+                }
             }
-        } else if (value === JSX_EXPERESSION_TYPE && !key.includes('attribute')) {
+        }
+    );
+    for (let [key, value] of Object.entries(flatParseTree)) {
+        if (value === JSX_EXPERESSION_TYPE && !key.includes('attribute')) {
             let {textKey, extractedText} = modifyNodeKeyAndGetNodeValue(
                 key,
                 'type',
@@ -179,8 +175,7 @@ const getAllJSXStringsWithTypeAndPath = (flatParseTree) => {
                     extractedStringsWithTypeAndPath.push(constructStringObject(textKey, extractedText, JSX_EXPERESSION_TYPE));
                 }
             }
-        }
-        else if (value === "title" && key.includes('attribute')) {
+        } else if (value === "title" && key.includes('attribute')) {
             let {textKey, extractedText} = modifyNodeKeyAndGetNodeValue(
                 key,
                 'name.name',
@@ -201,7 +196,7 @@ const getAllJSXStringsWithTypeAndPath = (flatParseTree) => {
 
 exports.extractStrings = jsFileContent => {
     let flatParseTree = getFlatParseTree(jsFileContent);
-    return getAllJSXStringsWithTypeAndPath(flatParseTree, );
+    return getAllJSXStringsWithTypeAndPath(flatParseTree, jsFileContent);
 };
 
 // const dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src/components/screens/';
