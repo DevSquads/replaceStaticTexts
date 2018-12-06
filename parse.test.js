@@ -269,7 +269,7 @@ describe('Extract And Replace Script', () => {
             let extractedStrings = parser.extractStrings(originalFileContentWithATitleProp);
 
             expect(extractedStrings).to.deep.contain({
-                "path": "program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression.value",
+                "path": "program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression",
                 "type": "JSXAttribute",
                 "value": "TEST_TITLE"
             });

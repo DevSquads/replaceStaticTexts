@@ -141,54 +141,47 @@ const constructStringObject = (textKey, extractedText, stringType) => {
     };
 };
 
-const modifyNodeKeyAndGetNodeValue = (key, originalPath, replacementPath, flatParseTree) => {
-    let textKey = key.replace(originalPath, replacementPath);
-    let extractedText = flatParseTree[textKey];
-    return {textKey, extractedText};
-};
-
 const getAllJSXStringsWithTypeAndPath = (flatParseTree, jsFileContent) => {
     let extractedStringsWithTypeAndPath = [];
 
     let parsedTree = getParsedTree(jsFileContent);
     babelTraverse.default(parsedTree, {
-            JSXText(path) {
-                if (exports.cleanUpExtractedString(path.node.value).length !== 0) {
-                    let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
-                    extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.toString(), JSX_TEXT_TYPE));
-                }
-            },
-            JSXExpressionContainer(path) {
-                path.traverse({
-                    StringLiteral(path) {
-                        if(exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
-                            let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
-                            if(!nodePath.includes('attribute')) {
-                                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_EXPERESSION_TYPE));
-                            }
+        JSXText(path) {
+            if (exports.cleanUpExtractedString(path.node.value).length !== 0) {
+                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.toString(), JSX_TEXT_TYPE));
+            }
+        },
+        JSXExpressionContainer(path) {
+            path.traverse({
+                StringLiteral(path) {
+                    if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
+                        let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                        if (!nodePath.includes('attribute')) {
+                            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_EXPERESSION_TYPE));
                         }
                     }
-                })
-            },
-        }
-    );
-    for (let [key, value] of Object.entries(flatParseTree)) {
-        if (value === "title" && key.includes('attribute')) {
-            let {textKey, extractedText} = modifyNodeKeyAndGetNodeValue(
-                key,
-                'name.name',
-                'value.expression.value',
-                flatParseTree
-            );
-
-            if (textKey in flatParseTree && extractedText && typeof extractedText === "string") {
-                extractedText = exports.cleanUpExtractedString(extractedText);
-                if (extractedText.length !== 0) {
-                    extractedStringsWithTypeAndPath.push(constructStringObject(textKey, extractedText, JSX_ATTRIBUTE_TYPE));
                 }
-            }
+            })
+        },
+        JSXOpeningElement(path) {
+            path.traverse({
+                JSXAttribute(path) {
+                    if (path.node.name.name === 'title') {
+                        path.traverse({
+                            StringLiteral(path) {
+                                if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
+                                    let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                                    extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_ATTRIBUTE_TYPE));
+                                }
+                            }
+                        })
+
+                    }
+                }
+            })
         }
-    }
+    });
     return extractedStringsWithTypeAndPath;
 };
 
