@@ -281,7 +281,7 @@ describe('Extract And Replace Script', () => {
                 `  render() {\n` +
                 `    return (\n` +
                 `    <View>\n` +
-                `   {someCondition && console.log('test')}\n` +
+                `   {someCondition && this.someCommand}\n` +
                 `      <Text style={"center"} title={"TEST_TITLE"}>{"Hello, world!"}</Text>\n` +
                 `      <View><Text>{"Another Text"}</Text></View>\n` +
                 `      {120}\n` +
@@ -296,7 +296,7 @@ describe('Extract And Replace Script', () => {
                 `class TestClass extends React.Component {\n` +
                 `  render() {\n` +
                 `    return <View>\n` +
-                `   {someCondition && console.log('test')}\n` +
+                `   {someCondition && this.someCommand}\n` +
                 `      <Text style={"center"} title={I18n.t("TestScreen.JSXAttribute.index(0)")}>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>\n` +
                 `      <View><Text>{I18n.t("TestScreen.JSXExpressionContainer.index(1)")}</Text></View>\n` +
                 `      {120}\n` +

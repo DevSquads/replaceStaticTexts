@@ -155,27 +155,25 @@ const getAllJSXStringsWithTypeAndPath = (flatParseTree, jsFileContent) => {
             JSXText(path) {
                 if (exports.cleanUpExtractedString(path.node.value).length !== 0) {
                     let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
-                    extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value, JSX_TEXT_TYPE));
+                    extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.toString(), JSX_TEXT_TYPE));
                 }
-            }
+            },
+            JSXExpressionContainer(path) {
+                path.traverse({
+                    StringLiteral(path) {
+                        if(exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
+                            let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                            if(!nodePath.includes('attribute')) {
+                                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_EXPERESSION_TYPE));
+                            }
+                        }
+                    }
+                })
+            },
         }
     );
     for (let [key, value] of Object.entries(flatParseTree)) {
-        if (value === JSX_EXPERESSION_TYPE && !key.includes('attribute')) {
-            let {textKey, extractedText} = modifyNodeKeyAndGetNodeValue(
-                key,
-                'type',
-                'expression.value',
-                flatParseTree
-            );
-
-            if (textKey in flatParseTree && extractedText && typeof extractedText === "string") {
-                extractedText = exports.cleanUpExtractedString(extractedText);
-                if (extractedText.length !== 0) {
-                    extractedStringsWithTypeAndPath.push(constructStringObject(textKey, extractedText, JSX_EXPERESSION_TYPE));
-                }
-            }
-        } else if (value === "title" && key.includes('attribute')) {
+        if (value === "title" && key.includes('attribute')) {
             let {textKey, extractedText} = modifyNodeKeyAndGetNodeValue(
                 key,
                 'name.name',
