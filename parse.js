@@ -1,36 +1,47 @@
 const babelParser = require("@babel/core");
 const babelTraverse = require("@babel/traverse");
 const babelGenerator = require('@babel/generator');
-const babelTypes = require('@babel/types');
 const fs = require("fs");
 const unbend = require('unbend');
 
 
-const JSXTEXT_TYPE = 'JSXText';
+const JSX_TEXT_TYPE = 'JSXText';
 const JSX_EXPERESSION_TYPE = 'JSXExpressionContainer';
-
+const JSX_ATTRIBUTE_TYPE = 'JSXAttribute';
 
 const modifyAbstractSyntaxTree = (extractedStringsWithKeyAndPath, parsedTree, stringType) => {
+
+
     for (let [_, obj] of Object.entries(extractedStringsWithKeyAndPath)) {
         babelTraverse.default(parsedTree, {
-            enter(path) {
-                if (stringType === JSXTEXT_TYPE) {
-                    if (path.type === stringType && exports.cleanUpExtractedString(path.node.value) === obj.value) {
-                        path.node.value = `{I18n.t("${obj.key}")}`;
-                        return;
-                    }
-
-                } else {
-                    if (path.type === stringType) {
-                        let parentNode = path.findParent(path => path.type === 'JSXElement');
-                        let stringPath = 'children.0.expression';
-                        let expressionValueNode = parentNode.get(stringPath);
-                        if (expressionValueNode.node && exports.cleanUpExtractedString(expressionValueNode.node.value) === obj.value) {
-                            expressionValueNode.node.extra.raw = `I18n.t("${obj.key}")`;
+            JSXText(path) {
+                if (exports.cleanUpExtractedString(path.node.value) === obj.value) {
+                    path.node.value = `{I18n.t("${obj.key}")}`;
+                    return;
+                }
+            },
+            JSXExpressionContainer(path) {
+                path.traverse({
+                    StringLiteral(path) {
+                        if (exports.cleanUpExtractedString(path.node.value) === obj.value) {
+                            path.node.extra.raw = `I18n.t("${obj.key}")`;
                             return;
                         }
                     }
-                }
+                });
+            },
+            JSXOpeningElement(path) {
+                path.traverse({
+                    JSXAttribute(path) {
+                        if(path.name === 'title') {
+                            path.traverse({
+                                StringLiteral(path) {
+                                    console.log(path);
+                                }
+                            })
+                        }
+                    }
+                });
             }
         })
     }
@@ -58,16 +69,16 @@ const getJsonDictObject = jsonFileName => {
     return JSON.parse(fileContent);
 };
 
-const getStringKey = (fileName, extractedStrings, index) => {
-    return `${fileName.replace('.js', '')}.${extractedStrings[index].type}.index(${index})`;
+const getStringKey = (fileName, extractedStrings, index, typeCount) => {
+    return `${fileName.replace('.js', '')}.${extractedStrings[index].type}.index(${typeCount - 1})`;
 };
 
 const getStringValue = (extractedStrings, index) => {
     return `${extractedStrings[index].value}`;
 };
 
-const insertNewEntryInJsonObject = (fileName, extractedStrings, index, jsonFileContent, extractedStringsWithKeyAndPath) => {
-    let stringKey = getStringKey(fileName, extractedStrings, index);
+const insertNewEntryInJsonObject = (fileName, extractedStrings, index, jsonFileContent, extractedStringsWithKeyAndPath, typeCount) => {
+    let stringKey = getStringKey(fileName, extractedStrings, index, typeCount);
     let stringValue = getStringValue(extractedStrings, index);
 
     jsonFileContent[stringKey] = stringValue;
@@ -86,9 +97,16 @@ writeToJsonFileWithIndentation = (jsonFileName, jsonFileContent) => {
 exports.writeToJsonFile = (jsonFileName, jsFileName, extractedStrings) => {
     let extractedStringsWithKeyAndPath = [];
     let jsonFileContent = getJsonDictObject(jsonFileName);
+    let jsxTypeCount = {};
 
     for (let index = 0; index < extractedStrings.length; index += 1) {
-        insertNewEntryInJsonObject(jsFileName, extractedStrings, index, jsonFileContent, extractedStringsWithKeyAndPath);
+        if(extractedStrings[index].type in jsxTypeCount) {
+            jsxTypeCount[extractedStrings[index].type] += 1;
+        }
+        else {
+            jsxTypeCount[extractedStrings[index].type] = 1;
+        }
+        insertNewEntryInJsonObject(jsFileName, extractedStrings, index, jsonFileContent, extractedStringsWithKeyAndPath, jsxTypeCount[extractedStrings[index].type]);
     }
 
     writeToJsonFileWithIndentation(jsonFileName, jsonFileContent);
@@ -132,10 +150,10 @@ const modifyNodeKeyAndGetNodeValue = (key, originalPath, replacementPath, flatPa
     return {textKey, extractedText};
 };
 
-const getAllJSXStringsWithTypeAndPath = flatParseTree => {
+const getAllJSXStringsWithTypeAndPath = (flatParseTree) => {
     let extractedStringsWithTypeAndPath = [];
     for (let [key, value] of Object.entries(flatParseTree)) {
-        if (value === JSXTEXT_TYPE) {
+        if (value === JSX_TEXT_TYPE) {
             let {textKey, extractedText} = modifyNodeKeyAndGetNodeValue(
                 key,
                 'type',
@@ -145,7 +163,7 @@ const getAllJSXStringsWithTypeAndPath = flatParseTree => {
 
             extractedText = exports.cleanUpExtractedString(extractedText);
             if (extractedText.length !== 0) {
-                extractedStringsWithTypeAndPath.push(constructStringObject(textKey, extractedText, JSXTEXT_TYPE));
+                extractedStringsWithTypeAndPath.push(constructStringObject(textKey, extractedText, JSX_TEXT_TYPE));
             }
         } else if (value === JSX_EXPERESSION_TYPE && !key.includes('attribute')) {
             let {textKey, extractedText} = modifyNodeKeyAndGetNodeValue(
@@ -162,23 +180,38 @@ const getAllJSXStringsWithTypeAndPath = flatParseTree => {
                 }
             }
         }
+        else if (value === "title" && key.includes('attribute')) {
+            let {textKey, extractedText} = modifyNodeKeyAndGetNodeValue(
+                key,
+                'name.name',
+                'value.expression.value',
+                flatParseTree
+            );
+
+            if (textKey in flatParseTree && extractedText && typeof extractedText === "string") {
+                extractedText = exports.cleanUpExtractedString(extractedText);
+                if (extractedText.length !== 0) {
+                    extractedStringsWithTypeAndPath.push(constructStringObject(textKey, extractedText, JSX_ATTRIBUTE_TYPE));
+                }
+            }
+        }
     }
     return extractedStringsWithTypeAndPath;
 };
 
 exports.extractStrings = jsFileContent => {
     let flatParseTree = getFlatParseTree(jsFileContent);
-    return getAllJSXStringsWithTypeAndPath(flatParseTree);
+    return getAllJSXStringsWithTypeAndPath(flatParseTree, );
 };
 
 // const dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src/components/screens/';
 //
 // fs.readdirSync(dirPath).forEach(jsFileName => {
-//     if(jsFileName.endsWith('.js')) {
-//        let jsFilePath = dirPath + jsFileName;
+//     if (jsFileName.endsWith('.js')) {
+//         let jsFilePath = dirPath + jsFileName;
 //         let jsonFilePath = 'en.json';
 //         let jsFileContent = exports.readJsFileContent(jsFilePath);
 //         console.log(jsFileName);
 //         exports.replaceStringsWithKeys(jsFileContent, jsFileName, jsonFilePath)
-//    }
+//     }
 // });

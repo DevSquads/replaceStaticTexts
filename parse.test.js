@@ -243,11 +243,71 @@ describe('Extract And Replace Script', () => {
 
             let extractedStrings = parser.extractStrings(originalFileContentWithAStyleExpression);
 
-            expect(extractedStrings[0]).to.not.deep.contain({
+            expect(extractedStrings).to.not.deep.contain({
                 "path": "program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.0.expression.value",
                 "type": "JSXExpressionContainer",
                 "value": "center"
             });
+        });
+
+        it('should retrieve texts inside title prop', () => {
+            let originalFileContentWithATitleProp = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `    <View>\n` +
+                `   {someCondition && console.log('test')}` +
+                `      <Text style={"center"} title={"TEST_TITLE"}>{"Hello, world!"}</Text>\n` +
+                `      <View><Text>{"Another Text"}</Text></View>\n` +
+                `      {120}\n` +
+                `    </View>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            let extractedStrings = parser.extractStrings(originalFileContentWithATitleProp);
+
+            expect(extractedStrings).to.deep.contain({
+                "path": "program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression.value",
+                "type": "JSXAttribute",
+                "value": "TEST_TITLE"
+            });
+        });
+
+        it('should replace texts inside title prop', () => {
+            let originalFileContentWithATitleProp = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `    <View>\n` +
+                `   {someCondition && console.log('test')}\n` +
+                `      <Text style={"center"} title={"TEST_TITLE"}>{"Hello, world!"}</Text>\n` +
+                `      <View><Text>{"Another Text"}</Text></View>\n` +
+                `      {120}\n` +
+                `    </View>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+
+            fs.writeFileSync('TestScreen.js', originalFileContentWithATitleProp);
+
+            let expectedFileContent = `import React from "react";\n\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return <View>\n` +
+                `   {someCondition && console.log('test')}\n` +
+                `      <Text style={"center"} title={I18n.t("TestScreen.JSXAttribute.index(0)")}>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>\n` +
+                `      <View><Text>{I18n.t("TestScreen.JSXExpressionContainer.index(1)")}</Text></View>\n` +
+                `      {120}\n` +
+                `    </View>;\n` +
+                `  }\n\n` +
+                `}`;
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            parser.replaceStringsWithKeys(originalFileContentWithATitleProp, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContent);
         });
     })
 });
