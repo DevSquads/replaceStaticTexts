@@ -388,7 +388,7 @@ describe('Extract And Replace Script', () => {
                 `  render() {\n` +
                 `    return <View>\n` +
                 `   {someCondition && this.someCommand}\n` +
-                `      <Text style={"center"} `+
+                `      <Text style={"center"} ` +
                 "title={`${I18n.t(\"TestScreen.TemplateElement.index(0)\")}${Omar}${I18n.t(\"TestScreen.TemplateElement.index(1)\")}`}>{I18n.t(\"TestScreen.JSXExpressionContainer.index(0)\")}</Text>\n" +
                 `      <View><Text>{I18n.t("TestScreen.JSXExpressionContainer.index(1)")}</Text></View>\n` +
                 `      {120}\n` +
@@ -424,5 +424,31 @@ describe('Extract And Replace Script', () => {
             }).to.not.throw();
         });
 
+        it('should replace texts inside conditional statement', () => {
+            let originalFileContentWithATitleProp = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  someObject = someCondition ? ['consequent text'] : ['alternate text'];` +
+                `  render() {\n` +
+                `    return (\n` +
+                `    <View></View>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+
+            fs.writeFileSync('TestScreen.js', originalFileContentWithATitleProp);
+
+            let expectedFileContent = `import React from "react";\n\n` +
+                `class TestClass extends React.Component {\n` +
+                `  someObject = someCondition ? [{I18n.t("TestScreen.ConditionalExpression.index(0)")}] : [{I18n.t("TestScreen.ConditionalExpression.index(1)")}];\n\n` +
+                `  render() {\n` +
+                `    return <View></View>;\n` +
+                `  }\n\n` +
+                `}`;
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            parser.replaceStringsWithKeys(originalFileContentWithATitleProp, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContent);
+        });
     })
 });

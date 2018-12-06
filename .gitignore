@@ -2,3 +2,6 @@
 package-lock.json
 output.json
 node_modules
+output
+en.json
+TestScreen.js

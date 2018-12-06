@@ -2,22 +2,14 @@ const babelParser = require("@babel/core");
 const babelTraverse = require("@babel/traverse");
 const babelGenerator = require('@babel/generator');
 const fs = require("fs");
-const unbend = require('unbend');
-const readdirp = require('readdirp');
-const dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src';
-const settings = {
-    root: dirPath,
-    entryType: 'all',
-    fileFilter: ['*.js']
-};
 
 const JSX_TEXT_TYPE = 'JSXText';
 const JSX_EXPERESSION_TYPE = 'JSXExpressionContainer';
 const JSX_ATTRIBUTE_TYPE = 'JSXAttribute';
 const TEMPLATE_ELEMENT = 'TemplateElement';
+const CONDITIONAL_EXPRESSION_TYPE = 'ConditionalExpression';
 
 const writeToFile = (jsFileName, newFileContent) => {
-
     fs.writeFileSync('output/' + jsFileName, newFileContent.code);
 };
 
@@ -59,6 +51,14 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
             if (exports.cleanUpExtractedString(path.node.value.raw).length !== 0) {
                 path.node.value.raw = "${I18n.t(\"" + `${extractedStringsWithKeyAndPath[0].key}` + "\")}";
                 extractedStringsWithKeyAndPath.shift();
+            }
+        },
+        conditionalExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
+            if(path.getPathLocation().includes('alternate') || path.getPathLocation().includes('consequent')) {
+                if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
+                    path.node.extra.raw = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
+                    extractedStringsWithKeyAndPath.shift();
+                }
             }
         },
     };
@@ -173,7 +173,13 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
         },
         TemplateElement(path){
             opts.templateElementNodeProcessor(path, opts.processedObject);
-
+        },
+        ConditionalExpression(path){
+            path.traverse({
+                StringLiteral(path) {
+                    opts.conditionalExpressionNodeProcessor(path, opts.processedObject);
+                }
+            })
         }
     };
 
@@ -213,7 +219,15 @@ exports.extractStrings = jsFileContent => {
                 let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
                 extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.raw, TEMPLATE_ELEMENT));
             }
-        }
+        },
+        conditionalExpressionNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            if(path.getPathLocation().includes('alternate') || path.getPathLocation().includes('consequent')) {
+                if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
+                    let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                    extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, CONDITIONAL_EXPRESSION_TYPE));
+                }
+            }
+        },
     };
 
     return traverseAndProcessAbstractSyntaxTree(jsFileContent, nodeProcessors);
@@ -234,8 +248,9 @@ const walkSync = function (dir, filelist) {
 };
 
 (function main() {
+    let dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src';
     let files = walkSync(dirPath, []);
-    ['output/ExpiringSubscriptionModal.js'].forEach(jsFilePath => {
+    files.forEach(jsFilePath => {
             if (jsFilePath.endsWith('.js')) {
                 let jsFileName = jsFilePath.split('/').reverse()[0];
                 let jsonFilePath = 'en.json';
@@ -245,4 +260,4 @@ const walkSync = function (dir, filelist) {
             }
         }
     );
-});
+})();
