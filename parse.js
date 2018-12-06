@@ -8,9 +8,122 @@ const JSX_EXPERESSION_TYPE = 'JSXExpressionContainer';
 const JSX_ATTRIBUTE_TYPE = 'JSXAttribute';
 const TEMPLATE_ELEMENT = 'TemplateElement';
 const CONDITIONAL_EXPRESSION_TYPE = 'ConditionalExpression';
+const OBJECT_PROPERTY_TYPE = 'ObjectProperty';
 
 const writeToFile = (jsFileName, newFileContent) => {
     fs.writeFileSync('output/' + jsFileName, newFileContent.code);
+};
+
+const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
+    let astVisitors = {
+        JSXText(path) {
+            opts.jsxTextNodeProcessor(path, opts.processedObject);
+        },
+        JSXExpressionContainer(path) {
+            path.traverse({
+                StringLiteral(path) {
+                    opts.jsxExpressionContainerNodeProcessor(path, opts.processedObject);
+                }
+            })
+        },
+        JSXOpeningElement(path) {
+            path.traverse({
+                JSXAttribute(path) {
+                    if (path.node.name.name === 'title') {
+                        path.traverse({
+                            StringLiteral(path) {
+                                opts.jsxTitleAttributeNodeProcessor(path, opts.processedObject);
+                            }
+                        })
+
+                    }
+                }
+            })
+        },
+        TemplateElement(path) {
+            opts.templateElementNodeProcessor(path, opts.processedObject);
+        },
+        ConditionalExpression(path) {
+            let b = true;
+            path.traverse({
+                Identifier(path) {
+                    if(path.node.name === 'require'){
+                        b = false;
+                        return;
+                    }
+                }
+            })
+            if (b) {
+                path.traverse({
+                    StringLiteral(path) {
+                        opts.conditionalExpressionNodeProcessor(path, opts.processedObject);
+                    }
+                })
+            }
+        },
+        ObjectProperty(path) {
+            path.traverse({
+                StringLiteral(path) {
+                    opts.objectPropertyNodeProcessor(path, opts.processedObject);
+                }
+            })
+        }
+    };
+
+    babelTraverse.default(opts.parsedTree, astVisitors);
+
+    return opts.processedObject;
+};
+
+exports.extractStrings = jsFileContent => {
+    let nodeProcessors = {
+        parsedTree: getParsedTree(jsFileContent),
+        processedObject: [],
+        jsxTextNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            if (exports.cleanUpExtractedString(path.node.value).length !== 0) {
+                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.toString(), JSX_TEXT_TYPE));
+            }
+        },
+
+        jsxExpressionContainerNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
+                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                if (!nodePath.includes('attribute')) {
+                    extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_EXPERESSION_TYPE));
+                }
+            }
+        },
+
+        jsxTitleAttributeNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
+                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_ATTRIBUTE_TYPE));
+            }
+        },
+        templateElementNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            if (exports.cleanUpExtractedString(path.node.value.raw).length !== 0) {
+                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.raw, TEMPLATE_ELEMENT));
+            }
+        },
+        conditionalExpressionNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            if (path.getPathLocation().includes('alternate') || path.getPathLocation().includes('consequent')) {
+                if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
+                    let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                    extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, CONDITIONAL_EXPRESSION_TYPE));
+                }
+            }
+        },
+        objectPropertyNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
+                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, OBJECT_PROPERTY_TYPE));
+            }
+        }
+    };
+
+    return traverseAndProcessAbstractSyntaxTree(jsFileContent, nodeProcessors);
 };
 
 exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
@@ -38,10 +151,9 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
         },
         jsxTitleAttributeNodeProcessor(path, extractedStringsWithKeyAndPath) {
             if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                if(path.getPathLocation().includes('expression')) {
+                if (path.getPathLocation().includes('expression')) {
                     path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-                }
-                else{
+                } else {
                     path.node.extra.raw = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
                 }
                 extractedStringsWithKeyAndPath.shift();
@@ -54,13 +166,19 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
             }
         },
         conditionalExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            if(path.getPathLocation().includes('alternate') || path.getPathLocation().includes('consequent')) {
+            if (path.getPathLocation().includes('alternate') || path.getPathLocation().includes('consequent')) {
                 if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
                     path.node.extra.raw = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
                     extractedStringsWithKeyAndPath.shift();
                 }
             }
         },
+        objectPropertyNodeProcessor(path, extractedStringsWithKeyAndPath) {
+            if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
+                path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
+                extractedStringsWithKeyAndPath.shift();
+            }
+        }
     };
 
     traverseAndProcessAbstractSyntaxTree(fileContent, nodeProcessors);
@@ -69,7 +187,6 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
     writeToFile(jsFileName, newFileContent);
     return newFileContent.code;
 };
-
 
 const getJsonDictObject = jsonFileName => {
     let fileContent = exports.readJsFileContent(jsonFileName);
@@ -144,96 +261,6 @@ const constructStringObject = (textKey, extractedText, stringType) => {
     };
 };
 
-const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
-    let astVisitors = {
-        JSXText(path) {
-            opts.jsxTextNodeProcessor(path, opts.processedObject);
-        },
-        JSXExpressionContainer(path) {
-            path.traverse({
-                StringLiteral(path) {
-
-                    opts.jsxExpressionContainerNodeProcessor(path, opts.processedObject);
-                }
-            })
-        },
-        JSXOpeningElement(path) {
-            path.traverse({
-                JSXAttribute(path) {
-                    if (path.node.name.name === 'title') {
-                        path.traverse({
-                            StringLiteral(path) {
-                                opts.jsxTitleAttributeNodeProcessor(path, opts.processedObject);
-                            }
-                        })
-
-                    }
-                }
-            })
-        },
-        TemplateElement(path){
-            opts.templateElementNodeProcessor(path, opts.processedObject);
-        },
-        ConditionalExpression(path){
-            path.traverse({
-                StringLiteral(path) {
-                    opts.conditionalExpressionNodeProcessor(path, opts.processedObject);
-                }
-            })
-        }
-    };
-
-    babelTraverse.default(opts.parsedTree, astVisitors);
-
-    return opts.processedObject;
-};
-
-exports.extractStrings = jsFileContent => {
-    let nodeProcessors = {
-        parsedTree: getParsedTree(jsFileContent),
-        processedObject: [],
-        jsxTextNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            if (exports.cleanUpExtractedString(path.node.value).length !== 0) {
-                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
-                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.toString(), JSX_TEXT_TYPE));
-            }
-        },
-
-        jsxExpressionContainerNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
-                if (!nodePath.includes('attribute')) {
-                    extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_EXPERESSION_TYPE));
-                }
-            }
-        },
-
-        jsxTitleAttributeNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
-                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_ATTRIBUTE_TYPE));
-            }
-        },
-        templateElementNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            if (exports.cleanUpExtractedString(path.node.value.raw).length !== 0) {
-                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
-                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.raw, TEMPLATE_ELEMENT));
-            }
-        },
-        conditionalExpressionNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            if(path.getPathLocation().includes('alternate') || path.getPathLocation().includes('consequent')) {
-                if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
-                    let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
-                    extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, CONDITIONAL_EXPRESSION_TYPE));
-                }
-            }
-        },
-    };
-
-    return traverseAndProcessAbstractSyntaxTree(jsFileContent, nodeProcessors);
-};
-
-
 const walkSync = function (dir, filelist) {
     let files = fs.readdirSync(dir);
     filelist = filelist || [];
@@ -260,4 +287,4 @@ const walkSync = function (dir, filelist) {
             }
         }
     );
-})();
+});

@@ -450,5 +450,74 @@ describe('Extract And Replace Script', () => {
 
             expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContent);
         });
+
+        it('should not replace texts inside require statement', () => {
+            let originalFileContentWithARequireStatement = `import React from "react";\n\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return <Image source={fillLeftFoot ? require("../../../assets/feet/left-foot-solid-full.png") : require("../../../assets/feet/left-foot-solid-empty.png")} />;\n` +
+                `  }\n\n` +
+                `}`;
+
+            fs.writeFileSync('TestScreen.js', originalFileContentWithARequireStatement);
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            parser.replaceStringsWithKeys(originalFileContentWithARequireStatement, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(originalFileContentWithARequireStatement);
+        });
+
+        it('should  replace title att inside object statement', () => {
+            let originalFileContentWithANAttributeInsideObject = 'import React from "react";\n\n' +
+                'class TestClass extends React.Component {\n' +
+                '  render() {\n' +
+                '   this.MODAL_CONTENT = {\n' +
+                '       title: "Friendly Shapa reminder"\n'+
+                '  }\n' +
+                ' }\n' +
+                '}';
+            let expectedFileContentWithANAttributeInsideObject = 'import React from "react";\n\n' +
+                'class TestClass extends React.Component {\n' +
+                '  render() {\n' +
+                '    this.MODAL_CONTENT = {\n' +
+                '      title: I18n.t("TestScreen.ObjectProperty.index(0)")\n'+
+                '    };\n' +
+                '  }\n\n' +
+                '}';
+
+            fs.writeFileSync('TestScreen.js', originalFileContentWithANAttributeInsideObject);
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            parser.replaceStringsWithKeys(originalFileContentWithANAttributeInsideObject, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContentWithANAttributeInsideObject);
+        });
+
+        it('should not replace title att inside object statement', () => {
+            let originalFileContentWithANAttributeInsideObject = 'import React from "react";\n\n' +
+                'class TestClass extends React.Component {\n' +
+                '  render() {\n' +
+                '   this.MODAL_CONTENT = {\n' +
+                '       title: "Friendly Shapa reminder"\n'+
+                '  }\n' +
+                ' }\n' +
+                '}';
+            let expectedFileContentWithANAttributeInsideObject = 'import React from "react";\n\n' +
+                'class TestClass extends React.Component {\n' +
+                '  render() {\n' +
+                '    this.MODAL_CONTENT = {\n' +
+                '      title: I18n.t("TestScreen.ObjectProperty.index(0)")\n'+
+                '    };\n' +
+                '  }\n\n' +
+                '}';
+
+            fs.writeFileSync('TestScreen.js', originalFileContentWithANAttributeInsideObject);
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            parser.replaceStringsWithKeys(originalFileContentWithANAttributeInsideObject, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContentWithANAttributeInsideObject);
+        });
+
     })
 });
