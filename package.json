@@ -18,6 +18,7 @@
     "babel-traverse": "^6.26.0",
     "chai": "^4.2.0",
     "mocha": "^5.2.0",
+    "readdirp": "^2.2.1",
     "tree-flatten": "^1.0.0",
     "unbend": "^2.1.2"
   },

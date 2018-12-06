@@ -3,7 +3,13 @@ const babelTraverse = require("@babel/traverse");
 const babelGenerator = require('@babel/generator');
 const fs = require("fs");
 const unbend = require('unbend');
-
+const readdirp = require('readdirp');
+const dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src';
+const settings = {
+    root: dirPath,
+    entryType: 'all',
+    fileFilter: ['*.js']
+};
 
 const JSX_TEXT_TYPE = 'JSXText';
 const JSX_EXPERESSION_TYPE = 'JSXExpressionContainer';
@@ -11,6 +17,7 @@ const JSX_ATTRIBUTE_TYPE = 'JSXAttribute';
 
 
 const writeToFile = (jsFileName, newFileContent) => {
+
     fs.writeFileSync('output/' + jsFileName, newFileContent.code);
 };
 
@@ -29,14 +36,22 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
             }
         },
         jsxExpressionContainerNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0 && extractedStringsWithKeyAndPath[0].value === path.node.value) {
-                path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-                extractedStringsWithKeyAndPath.shift();
+            let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+            if (!nodePath.includes('attribute')) {
+                if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0 && extractedStringsWithKeyAndPath[0].value === path.node.value) {
+                    path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
+                    extractedStringsWithKeyAndPath.shift();
+                }
             }
         },
         jsxTitleAttributeNodeProcessor(path, extractedStringsWithKeyAndPath) {
             if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
+                if(path.getPathLocation().includes('expression')) {
+                    path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
+                }
+                else{
+                    path.node.extra.raw = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
+                }
                 extractedStringsWithKeyAndPath.shift();
             }
         }
@@ -107,10 +122,12 @@ exports.cleanUpExtractedString = extractedString => {
 };
 
 const getParsedTree = jsFileContent => {
-    return babelParser.parse(jsFileContent, {
+    let parseTree = babelParser.parse(jsFileContent, {
         presets: ["@babel/preset-react"],
         plugins: ["@babel/plugin-proposal-class-properties"]
     });
+    fs.writeFileSync('output-tree.json', JSON.stringify(parseTree));
+    return parseTree;
 };
 
 const constructStringObject = (textKey, extractedText, stringType) => {
@@ -129,6 +146,7 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
         JSXExpressionContainer(path) {
             path.traverse({
                 StringLiteral(path) {
+
                     opts.jsxExpressionContainerNodeProcessor(path, opts.processedObject);
                 }
             })
@@ -185,14 +203,29 @@ exports.extractStrings = jsFileContent => {
     return traverseAndProcessAbstractSyntaxTree(jsFileContent, nodeProcessors);
 };
 
-// const dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src/components/screens/';
-//
-// fs.readdirSync(dirPath).forEach(jsFileName => {
-//     if (jsFileName.endsWith('.js')) {
-//         let jsFilePath = dirPath + jsFileName;
-//         let jsonFilePath = 'en.json';
-//         let jsFileContent = exports.readJsFileContent(jsFilePath);
-//         console.log(jsFileName);
-//         exports.replaceStringsWithKeys(jsFileContent, jsFileName, jsonFilePath)
-//     }
-// });
+
+const walkSync = function (dir, filelist) {
+    let files = fs.readdirSync(dir);
+    filelist = filelist || [];
+    files.forEach(function (file) {
+        if (fs.statSync(dir + '/' + file).isDirectory()) {
+            filelist = walkSync(dir + '/' + file, filelist);
+        } else {
+            filelist.push(dir + '/' + file);
+        }
+    });
+    return filelist;
+};
+function main() {
+    let files = walkSync(dirPath, []);
+    files.forEach(jsFilePath => {
+            if (jsFilePath.endsWith('.js')) {
+                let jsFileName = jsFilePath.split('/').reverse()[0];
+                let jsonFilePath = 'en.json';
+                let jsFileContent = exports.readJsFileContent(jsFilePath);
+                console.log(jsFileName);
+                exports.replaceStringsWithKeys(jsFileContent, jsFileName, jsonFilePath);
+            }
+        }
+    );
+}

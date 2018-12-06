@@ -225,6 +225,27 @@ describe('Extract And Replace Script', () => {
             }).to.not.throw();
         });
 
+        it('should not throw an exception when there is no strings to extract', () => {
+            let originalFileContentWithNoStringsToRetrieve = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `    <View>\n` +
+                `    </View>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            expect(() => {
+                parser.replaceStringsWithKeys(
+                    originalFileContentWithNoStringsToRetrieve,
+                    'TestScreen.js',
+                    jsonTestFileName
+                )
+            }).to.not.throw();
+        });
+
         it('should not retrieve text inside a style expression', () => {
             let originalFileContentWithAStyleExpression = `import React from "react";\n` +
                 `class TestClass extends React.Component {\n` +
@@ -275,7 +296,7 @@ describe('Extract And Replace Script', () => {
             });
         });
 
-        it('should replace texts inside title prop', () => {
+        it('should replace texts inside title prop with an expression', () => {
             let originalFileContentWithATitleProp = `import React from "react";\n` +
                 `class TestClass extends React.Component {\n` +
                 `  render() {\n` +
@@ -309,5 +330,62 @@ describe('Extract And Replace Script', () => {
 
             expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContent);
         });
+        it('should replace texts inside title prop without an expression', () => {
+            let originalFileContentWithATitleProp = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `    <View>\n` +
+                `   {someCondition && this.someCommand}\n` +
+                `      <Text style={"center"} title="TEST_TITLE">{"Hello, world!"}</Text>\n` +
+                `      <View><Text>{"Another Text"}</Text></View>\n` +
+                `      {120}\n` +
+                `    </View>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+
+            fs.writeFileSync('TestScreen.js', originalFileContentWithATitleProp);
+
+            let expectedFileContent = `import React from "react";\n\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return <View>\n` +
+                `   {someCondition && this.someCommand}\n` +
+                `      <Text style={"center"} title={I18n.t("TestScreen.JSXAttribute.index(0)")}>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>\n` +
+                `      <View><Text>{I18n.t("TestScreen.JSXExpressionContainer.index(1)")}</Text></View>\n` +
+                `      {120}\n` +
+                `    </View>;\n` +
+                `  }\n\n` +
+                `}`;
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            parser.replaceStringsWithKeys(originalFileContentWithATitleProp, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContent);
+        });
+
+        it('should not throw an exception when faced with an empty expression', () => {
+            let originalFileContentWithASelfClosingElement = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `    <View>\n` +
+                `       {" "}\n` +
+                `    </View>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            expect(() => {
+                parser.replaceStringsWithKeys(
+                    originalFileContentWithASelfClosingElement,
+                    'TestScreen.js',
+                    jsonTestFileName
+                )
+            }).to.not.throw();
+        });
+
     })
 });
