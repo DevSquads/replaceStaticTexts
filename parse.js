@@ -9,7 +9,7 @@ const JSX_TEXT_TYPE = 'JSXText';
 const JSX_EXPERESSION_TYPE = 'JSXExpressionContainer';
 const JSX_ATTRIBUTE_TYPE = 'JSXAttribute';
 
-const modifyAbstractSyntaxTree = (extractedStringsWithKeyAndPath, parsedTree, stringType) => {
+const modifyAbstractSyntaxTree = (extractedStringsWithKeyAndPath, parsedTree) => {
     for (let [_, obj] of Object.entries(extractedStringsWithKeyAndPath)) {
         babelTraverse.default(parsedTree, {
             JSXText(path) {
@@ -49,12 +49,19 @@ const writeToFile = (jsFileName, newFileContent) => {
     fs.writeFileSync('output/' + jsFileName, newFileContent.code);
 };
 
-exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, stringType) => {
-    let extractedStrings = exports.extractStrings(fileContent, stringType);
+exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
+    let extractedStrings = exports.extractStrings(fileContent);
     let extractedStringsWithKeyAndPath = exports.writeToJsonFile(jsonFileName, jsFileName, extractedStrings);
     let parsedTree = getParsedTree(fileContent);
 
-    modifyAbstractSyntaxTree(extractedStringsWithKeyAndPath, parsedTree, stringType);
+    // let nodeProcessors = {
+    //     jsxTextNodeProcessor(path) {
+    //         path.node.value = `{I18n.t("${obj.key}")}`;
+    //         return;
+    //     }
+    // };
+    // traverseAndProcessAbstractSyntaxTree(fileContent, nodeProcessors);
+    modifyAbstractSyntaxTree(extractedStringsWithKeyAndPath, parsedTree);
 
     let newFileContent = babelGenerator.default(parsedTree, {sourceMap: true}, fileContent);
     writeToFile(jsFileName, newFileContent);
@@ -141,26 +148,17 @@ const constructStringObject = (textKey, extractedText, stringType) => {
     };
 };
 
-const getAllJSXStringsWithTypeAndPath = (flatParseTree, jsFileContent) => {
-    let extractedStringsWithTypeAndPath = [];
-
+const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
     let parsedTree = getParsedTree(jsFileContent);
-    babelTraverse.default(parsedTree, {
+
+    let astVisitors = {
         JSXText(path) {
-            if (exports.cleanUpExtractedString(path.node.value).length !== 0) {
-                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
-                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.toString(), JSX_TEXT_TYPE));
-            }
+            opts.jsxTextNodeProcessor(path, opts.processedObject);
         },
         JSXExpressionContainer(path) {
             path.traverse({
                 StringLiteral(path) {
-                    if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                        let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
-                        if (!nodePath.includes('attribute')) {
-                            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_EXPERESSION_TYPE));
-                        }
-                    }
+                    opts.jsxExpressionContainerNodeProcessor(path, opts.processedObject);
                 }
             })
         },
@@ -170,10 +168,7 @@ const getAllJSXStringsWithTypeAndPath = (flatParseTree, jsFileContent) => {
                     if (path.node.name.name === 'title') {
                         path.traverse({
                             StringLiteral(path) {
-                                if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                                    let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
-                                    extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_ATTRIBUTE_TYPE));
-                                }
+                                opts.jsxTitleAttributeNodeProcessor(path, opts.processedObject);
                             }
                         })
 
@@ -181,13 +176,41 @@ const getAllJSXStringsWithTypeAndPath = (flatParseTree, jsFileContent) => {
                 }
             })
         }
-    });
-    return extractedStringsWithTypeAndPath;
+    };
+
+    babelTraverse.default(parsedTree, astVisitors);
+
+    return opts.processedObject;
 };
 
 exports.extractStrings = jsFileContent => {
-    let flatParseTree = getFlatParseTree(jsFileContent);
-    return getAllJSXStringsWithTypeAndPath(flatParseTree, jsFileContent);
+    let nodeProcessors = {
+        processedObject: [],
+        jsxTextNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            if (exports.cleanUpExtractedString(path.node.value).length !== 0) {
+                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.toString(), JSX_TEXT_TYPE));
+            }
+        },
+
+        jsxExpressionContainerNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
+                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                if (!nodePath.includes('attribute')) {
+                    extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_EXPERESSION_TYPE));
+                }
+            }
+        },
+
+        jsxTitleAttributeNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
+                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_ATTRIBUTE_TYPE));
+            }
+        }
+    };
+
+    return traverseAndProcessAbstractSyntaxTree(jsFileContent, nodeProcessors);
 };
 
 // const dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src/components/screens/';
