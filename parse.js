@@ -14,7 +14,7 @@ const settings = {
 const JSX_TEXT_TYPE = 'JSXText';
 const JSX_EXPERESSION_TYPE = 'JSXExpressionContainer';
 const JSX_ATTRIBUTE_TYPE = 'JSXAttribute';
-
+const TEMPLATE_ELEMENT = 'TemplateElement';
 
 const writeToFile = (jsFileName, newFileContent) => {
 
@@ -54,7 +54,13 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
                 }
                 extractedStringsWithKeyAndPath.shift();
             }
-        }
+        },
+        templateElementNodeProcessor(path, extractedStringsWithKeyAndPath) {
+            if (exports.cleanUpExtractedString(path.node.value.raw).length !== 0) {
+                path.node.value.raw = "${I18n.t(\"" + `${extractedStringsWithKeyAndPath[0].key}` + "\")}";
+                extractedStringsWithKeyAndPath.shift();
+            }
+        },
     };
 
     traverseAndProcessAbstractSyntaxTree(fileContent, nodeProcessors);
@@ -164,6 +170,10 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                     }
                 }
             })
+        },
+        TemplateElement(path){
+            opts.templateElementNodeProcessor(path, opts.processedObject);
+
         }
     };
 
@@ -197,6 +207,12 @@ exports.extractStrings = jsFileContent => {
                 let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
                 extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_ATTRIBUTE_TYPE));
             }
+        },
+        templateElementNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            if (exports.cleanUpExtractedString(path.node.value.raw).length !== 0) {
+                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.raw, TEMPLATE_ELEMENT));
+            }
         }
     };
 
@@ -216,9 +232,10 @@ const walkSync = function (dir, filelist) {
     });
     return filelist;
 };
-function main() {
+
+(function main() {
     let files = walkSync(dirPath, []);
-    files.forEach(jsFilePath => {
+    ['output/ExpiringSubscriptionModal.js'].forEach(jsFilePath => {
             if (jsFilePath.endsWith('.js')) {
                 let jsFileName = jsFilePath.split('/').reverse()[0];
                 let jsonFilePath = 'en.json';
@@ -228,4 +245,4 @@ function main() {
             }
         }
     );
-}
+});

@@ -330,6 +330,7 @@ describe('Extract And Replace Script', () => {
 
             expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContent);
         });
+
         it('should replace texts inside title prop without an expression', () => {
             let originalFileContentWithATitleProp = `import React from "react";\n` +
                 `class TestClass extends React.Component {\n` +
@@ -353,6 +354,42 @@ describe('Extract And Replace Script', () => {
                 `    return <View>\n` +
                 `   {someCondition && this.someCommand}\n` +
                 `      <Text style={"center"} title={I18n.t("TestScreen.JSXAttribute.index(0)")}>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>\n` +
+                `      <View><Text>{I18n.t("TestScreen.JSXExpressionContainer.index(1)")}</Text></View>\n` +
+                `      {120}\n` +
+                `    </View>;\n` +
+                `  }\n\n` +
+                `}`;
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            parser.replaceStringsWithKeys(originalFileContentWithATitleProp, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContent);
+        });
+
+        it('should replace texts inside an interpolated string', () => {
+            let originalFileContentWithATitleProp = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `    <View>\n` +
+                `   {someCondition && this.someCommand}\n` +
+                "      <Text style={\"center\"} title={`Hey ${Omar} We Love you`}>{\"Hello, world!\"}</Text>\n" +
+                `      <View><Text>{"Another Text"}</Text></View>\n` +
+                `      {120}\n` +
+                `    </View>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+
+            fs.writeFileSync('TestScreen.js', originalFileContentWithATitleProp);
+
+            let expectedFileContent = `import React from "react";\n\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return <View>\n` +
+                `   {someCondition && this.someCommand}\n` +
+                `      <Text style={"center"} `+
+                "title={`${I18n.t(\"TestScreen.TemplateElement.index(0)\")}${Omar}${I18n.t(\"TestScreen.TemplateElement.index(1)\")}`}>{I18n.t(\"TestScreen.JSXExpressionContainer.index(0)\")}</Text>\n" +
                 `      <View><Text>{I18n.t("TestScreen.JSXExpressionContainer.index(1)")}</Text></View>\n` +
                 `      {120}\n` +
                 `    </View>;\n` +
