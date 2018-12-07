@@ -9,7 +9,7 @@ const JSX_ATTRIBUTE_TYPE = 'JSXAttribute';
 const TEMPLATE_ELEMENT = 'TemplateElement';
 const CONDITIONAL_EXPRESSION_TYPE = 'ConditionalExpression';
 const OBJECT_PROPERTY_TYPE = 'ObjectProperty';
-
+const CALL_EXPRESSION_TYPE = 'CallExpression';
 const writeToFile = (jsFileName, newFileContent) => {
     fs.writeFileSync('output/' + jsFileName, newFileContent.code);
 };
@@ -44,16 +44,16 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
             opts.templateElementNodeProcessor(path, opts.processedObject);
         },
         ConditionalExpression(path) {
-            let b = true;
+            let notARequireStatment = true;
             path.traverse({
                 Identifier(path) {
                     if(path.node.name === 'require'){
-                        b = false;
+                        notARequireStatment = false;
                         return;
                     }
                 }
-            })
-            if (b) {
+            });
+            if (notARequireStatment) {
                 path.traverse({
                     StringLiteral(path) {
                         opts.conditionalExpressionNodeProcessor(path, opts.processedObject);
@@ -67,7 +67,27 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                     opts.objectPropertyNodeProcessor(path, opts.processedObject);
                 }
             })
-        }
+        },
+        CallExpression(path) {
+            let notARequireStatment = true;
+            path.traverse({
+                Identifier(path) {
+                    if(path.node.name === 'require'){
+                        notARequireStatment = false;
+                        return;
+                    }
+                }
+            });
+            if (notARequireStatment) {
+                path.traverse({
+                    StringLiteral(path) {
+                        if (path.getPathLocation().includes('arguments'))
+                            opts.callExpressionNodeProcessor(path, opts.processedObject);
+                    }
+                })
+            }
+        },
+
     };
 
     babelTraverse.default(opts.parsedTree, astVisitors);
@@ -119,6 +139,12 @@ exports.extractStrings = jsFileContent => {
             if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
                 let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
                 extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, OBJECT_PROPERTY_TYPE));
+            }
+        },
+        callExpressionNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
+                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, CALL_EXPRESSION_TYPE));
             }
         }
     };
@@ -174,6 +200,12 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
             }
         },
         objectPropertyNodeProcessor(path, extractedStringsWithKeyAndPath) {
+            if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
+                path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
+                extractedStringsWithKeyAndPath.shift();
+            }
+        },
+        callExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
             if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
                 path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
                 extractedStringsWithKeyAndPath.shift();
@@ -275,7 +307,7 @@ const walkSync = function (dir, filelist) {
 };
 
 (function main() {
-    let dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src';
+    let dirPath = '/home/xamohsen/devsquads/shapa-react-native/src/components';
     let files = walkSync(dirPath, []);
     files.forEach(jsFilePath => {
             if (jsFilePath.endsWith('.js')) {

@@ -519,5 +519,61 @@ describe('Extract And Replace Script', () => {
             expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContentWithANAttributeInsideObject);
         });
 
+        it('should replace text inside function call', () => {
+            let originalFileContentWithANAttributeInsideObject = 'import React from "react";\n\n' +
+                'class TestClass extends React.Component {\n' +
+                '  render() {\n' +
+                '   CalendarUtil.schedule("Renew your Shapa subscription", options);\n' +
+                '  }\n' +
+                '}';
+            let expectedFileContentWithANAttributeInsideObject = 'import React from "react";\n\n' +
+                'class TestClass extends React.Component {\n' +
+                '  render() {\n' +
+                '    CalendarUtil.schedule(I18n.t("TestScreen.CallExpression.index(0)"), options);\n' +
+                '  }\n\n' +
+                '}';
+
+            fs.writeFileSync('TestScreen.js', originalFileContentWithANAttributeInsideObject);
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            parser.replaceStringsWithKeys(originalFileContentWithANAttributeInsideObject, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContentWithANAttributeInsideObject);
+        });
+
+        it('should extract text from function call and object title with' +
+            ' zero index for difference type', () => {
+            let originalFileContentWithANAttributeInsideObject = 'import React from "react";\n\n' +
+                'class TestClass extends React.Component {\n' +
+                '  render() {\n' +
+                '   CalendarUtil.schedule("Renew your Shapa subscription", options);\n' +
+                '   CalendarUtil.schedule("Renew your Shapa subscription", options);\n' +
+                '    this.MODAL_CONTENT = {\n' +
+                '      title: "Shapa title",\n'+
+                '      title: "Shapa title(1)"\n'+
+
+                '    };\n' +
+                '  }\n' +
+                '}';
+            let expectedFileContentWithANAttributeInsideObject = 'import React from "react";\n\n' +
+                'class TestClass extends React.Component {\n' +
+                '  render() {\n' +
+                '    CalendarUtil.schedule(I18n.t("TestScreen.CallExpression.index(0)"), options);\n' +
+                '    CalendarUtil.schedule(I18n.t("TestScreen.CallExpression.index(1)"), options);\n' +
+                '    this.MODAL_CONTENT = {\n' +
+                '      title: I18n.t("TestScreen.ObjectProperty.index(0)"),\n'+
+                '      title: I18n.t("TestScreen.ObjectProperty.index(1)")\n'+
+                '    };\n' +
+                '  }\n\n' +
+                '}';
+
+            fs.writeFileSync('TestScreen.js', originalFileContentWithANAttributeInsideObject);
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            parser.replaceStringsWithKeys(originalFileContentWithANAttributeInsideObject, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContentWithANAttributeInsideObject);
+        });
+
     })
 });
