@@ -40,11 +40,19 @@ describe('Extract And Replace Script', () => {
             }
         });
 
+        before(() => {
+            if(!fs.existsSync('output')) {
+                fs.mkdirSync('output');
+            }
+        });
+
         after(() => {
             let files = fs.readdirSync('output');
             for (let i = 0; i < files.length; i++) {
                 fs.unlinkSync('output/' + files[i]);
             }
+            fs.rmdirSync('output');
+            fs.unlinkSync('TestScreen.js');
         });
 
         it('should read a js file', () => {

@@ -90,20 +90,24 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
     return opts.processedObject;
 };
 
+function getNodePath(path) {
+    return path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+}
+
 exports.extractStrings = jsFileContent => {
     let nodeProcessors = {
         parsedTree: getParsedTree(jsFileContent),
         processedObject: [],
         jsxTextNodeProcessor(path, extractedStringsWithTypeAndPath) {
             if (exports.cleanUpExtractedString(path.node.value).length !== 0) {
-                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                let nodePath = getNodePath(path);
                 extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.toString(), JSX_TEXT_TYPE));
             }
         },
 
         jsxExpressionContainerNodeProcessor(path, extractedStringsWithTypeAndPath) {
             if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                let nodePath = getNodePath(path);
                 if (!nodePath.includes('attribute')) {
                     extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_EXPERESSION_TYPE));
                 }
@@ -112,27 +116,27 @@ exports.extractStrings = jsFileContent => {
 
         jsxTitleAttributeNodeProcessor(path, extractedStringsWithTypeAndPath) {
             if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                let nodePath = getNodePath(path);
                 extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_ATTRIBUTE_TYPE));
             }
         },
         templateElementNodeProcessor(path, extractedStringsWithTypeAndPath) {
             if (exports.cleanUpExtractedString(path.node.value.raw).length !== 0) {
-                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                let nodePath = getNodePath(path);
                 extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.raw, TEMPLATE_ELEMENT));
             }
         },
         conditionalExpressionNodeProcessor(path, extractedStringsWithTypeAndPath) {
             if (path.getPathLocation().includes('alternate') || path.getPathLocation().includes('consequent')) {
                 if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
-                    let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                    let nodePath = getNodePath(path);
                     extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, CONDITIONAL_EXPRESSION_TYPE));
                 }
             }
         },
         objectPropertyNodeProcessor(path, extractedStringsWithTypeAndPath) {
             if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
-                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+                let nodePath = getNodePath(path);
                 extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, OBJECT_PROPERTY_TYPE));
             }
         }
@@ -156,7 +160,7 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
             }
         },
         jsxExpressionContainerNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+            let nodePath = getNodePath(path);
             if (!nodePath.includes('attribute')) {
                 if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0 && extractedStringsWithKeyAndPath[0].value === path.node.value) {
                     path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
