@@ -493,30 +493,23 @@ describe('Extract And Replace Script', () => {
             expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContentWithANAttributeInsideObject);
         });
 
-        it('should not replace title att inside object statement', () => {
-            let originalFileContentWithANAttributeInsideObject = 'import React from "react";\n\n' +
-                'class TestClass extends React.Component {\n' +
-                '  render() {\n' +
-                '   this.MODAL_CONTENT = {\n' +
-                '       title: "Friendly Shapa reminder"\n'+
+        it('should not replace style values', () => {
+            let fileContentWithStyleValues = 'import React from "react";\n' +
+                'const styles = StyleSheet.create({\n' +
+                '  button: {\n' +
+                '    justifyContent: "center"\n' +
                 '  }\n' +
-                ' }\n' +
-                '}';
-            let expectedFileContentWithANAttributeInsideObject = 'import React from "react";\n\n' +
+                '});\n\n'+
                 'class TestClass extends React.Component {\n' +
-                '  render() {\n' +
-                '    this.MODAL_CONTENT = {\n' +
-                '      title: I18n.t("TestScreen.ObjectProperty.index(0)")\n'+
-                '    };\n' +
-                '  }\n\n' +
+                '  render() {}\n\n' +
                 '}';
 
-            fs.writeFileSync('TestScreen.js', originalFileContentWithANAttributeInsideObject);
+            fs.writeFileSync('TestScreen.js', fileContentWithStyleValues);
             fs.writeFileSync(jsonTestFileName, '{}');
 
-            parser.replaceStringsWithKeys(originalFileContentWithANAttributeInsideObject, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+            parser.replaceStringsWithKeys(fileContentWithStyleValues, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
 
-            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContentWithANAttributeInsideObject);
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(fileContentWithStyleValues);
         });
 
     })

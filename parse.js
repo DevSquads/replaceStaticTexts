@@ -44,29 +44,44 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
             opts.templateElementNodeProcessor(path, opts.processedObject);
         },
         ConditionalExpression(path) {
-            let b = true;
+            let notARequireStatement = true;
             path.traverse({
                 Identifier(path) {
-                    if(path.node.name === 'require'){
-                        b = false;
+                    if (path.node.name === 'require') {
+                        notARequireStatement = false;
                         return;
                     }
                 }
-            })
-            if (b) {
+            });
+            if (notARequireStatement) {
                 path.traverse({
                     StringLiteral(path) {
                         opts.conditionalExpressionNodeProcessor(path, opts.processedObject);
                     }
-                })
+                });
             }
         },
-        ObjectProperty(path) {
+        AssignmentExpression(path) {
+            let notAStyleSheet = true;
             path.traverse({
-                StringLiteral(path) {
-                    opts.objectPropertyNodeProcessor(path, opts.processedObject);
+                Identifier(path) {
+                    if (path.node.name === 'StyleSheet') {
+                        notAStyleSheet = false;
+                        return;
+                    }
                 }
-            })
+            });
+            if (notAStyleSheet) {
+                path.traverse({
+                    ObjectProperty(path) {
+                        path.traverse({
+                            StringLiteral(path) {
+                                opts.objectPropertyNodeProcessor(path, opts.processedObject);
+                            }
+                        })
+                    }
+                });
+            }
         }
     };
 
