@@ -142,7 +142,6 @@ describe('Extract And Replace Script', () => {
         });
 
         it('should replace the extracted JSXText strings with generated key', () => {
-            let stringType = 'JSXText';
             let modifiedFileContent = `import React from "react";\n` +
                 `\n` +
                 `class TestClass extends React.Component {\n` +
@@ -156,13 +155,12 @@ describe('Extract And Replace Script', () => {
                 `}`;
             fs.writeFileSync(jsonTestFileName, '{}');
 
-            let jsFileContentWithReplacedKeys = parser.replaceStringsWithKeys(originalFileContentWithJSXText, 'TestScreen.js', jsonTestFileName, stringType);
+            let jsFileContentWithReplacedKeys = parser.replaceStringsWithKeys(originalFileContentWithJSXText, 'TestScreen.js', jsonTestFileName);
 
             expect(jsFileContentWithReplacedKeys).to.eql(modifiedFileContent);
         });
 
         it('should replace the extracted ExpressionText strings with generated key', () => {
-            let stringType = 'JSXExpressionContainer';
             let modifiedFileContent = `import React from "react";\n` +
                 `\n` +
                 `class TestClass extends React.Component {\n` +
@@ -176,13 +174,12 @@ describe('Extract And Replace Script', () => {
                 `}`;
             fs.writeFileSync(jsonTestFileName, '{}');
 
-            let jsFileContentWithReplacedKeys = parser.replaceStringsWithKeys(originalFileContentWithExpressionText, 'TestScreen.js', jsonTestFileName, stringType);
+            let jsFileContentWithReplacedKeys = parser.replaceStringsWithKeys(originalFileContentWithExpressionText, 'TestScreen.js', jsonTestFileName);
 
             expect(jsFileContentWithReplacedKeys).to.eql(modifiedFileContent);
         });
 
         it('should not throw an exception when a non literal string expression container is met', () => {
-            let stringType = 'JSXExpressionContainer';
             let originalFileContentWithANonLiteralStringContainer = `import React from "react";\n` +
                 `class TestClass extends React.Component {\n` +
                 `  render() {\n` +
@@ -202,8 +199,8 @@ describe('Extract And Replace Script', () => {
                 parser.replaceStringsWithKeys(
                     originalFileContentWithANonLiteralStringContainer,
                     'TestScreen.js',
-                    jsonTestFileName,
-                    stringType)
+                    jsonTestFileName
+                )
             }).to.not.throw();
         });
 
@@ -228,8 +225,8 @@ describe('Extract And Replace Script', () => {
                 parser.replaceStringsWithKeys(
                     originalFileContentWithANonLiteralStringContainer,
                     'TestScreen.js',
-                    jsonTestFileName,
-                    stringType)
+                    jsonTestFileName
+                )
             }).to.not.throw();
         });
 
@@ -334,7 +331,11 @@ describe('Extract And Replace Script', () => {
                 `}`;
             fs.writeFileSync(jsonTestFileName, '{}');
 
-            parser.replaceStringsWithKeys(originalFileContentWithATitleProp, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+            parser.replaceStringsWithKeys(
+                originalFileContentWithATitleProp,
+                'TestScreen.js',
+                jsonTestFileName
+            );
 
             expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContent);
         });
@@ -369,7 +370,11 @@ describe('Extract And Replace Script', () => {
                 `}`;
             fs.writeFileSync(jsonTestFileName, '{}');
 
-            parser.replaceStringsWithKeys(originalFileContentWithATitleProp, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+            parser.replaceStringsWithKeys(
+                originalFileContentWithATitleProp,
+                'TestScreen.js',
+                jsonTestFileName
+            );
 
             expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContent);
         });
@@ -405,7 +410,11 @@ describe('Extract And Replace Script', () => {
                 `}`;
             fs.writeFileSync(jsonTestFileName, '{}');
 
-            parser.replaceStringsWithKeys(originalFileContentWithATitleProp, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+            parser.replaceStringsWithKeys(
+                originalFileContentWithATitleProp,
+                'TestScreen.js',
+                jsonTestFileName
+            );
 
             expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContent);
         });
@@ -454,7 +463,11 @@ describe('Extract And Replace Script', () => {
                 `}`;
             fs.writeFileSync(jsonTestFileName, '{}');
 
-            parser.replaceStringsWithKeys(originalFileContentWithATitleProp, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+            parser.replaceStringsWithKeys(
+                originalFileContentWithATitleProp,
+                'TestScreen.js',
+                jsonTestFileName
+            );
 
             expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContent);
         });
@@ -470,13 +483,17 @@ describe('Extract And Replace Script', () => {
             fs.writeFileSync('TestScreen.js', originalFileContentWithARequireStatement);
             fs.writeFileSync(jsonTestFileName, '{}');
 
-            parser.replaceStringsWithKeys(originalFileContentWithARequireStatement, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+            parser.replaceStringsWithKeys(
+                originalFileContentWithARequireStatement,
+                'TestScreen.js',
+                jsonTestFileName
+            );
 
             expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(originalFileContentWithARequireStatement);
         });
 
-        it('should  replace title att inside object statement', () => {
-            let originalFileContentWithANAttributeInsideObject = 'import React from "react";\n\n' +
+        it('should replace title attribute inside object statement', () => {
+            let originalFileContentWithAnAttributeInsideObject = 'import React from "react";\n\n' +
                 'class TestClass extends React.Component {\n' +
                 '  render() {\n' +
                 '   this.MODAL_CONTENT = {\n' +
@@ -484,7 +501,7 @@ describe('Extract And Replace Script', () => {
                 '  }\n' +
                 ' }\n' +
                 '}';
-            let expectedFileContentWithANAttributeInsideObject = 'import React from "react";\n\n' +
+            let expectedFileContentWithAnAttributeInsideObject = 'import React from "react";\n\n' +
                 'class TestClass extends React.Component {\n' +
                 '  render() {\n' +
                 '    this.MODAL_CONTENT = {\n' +
@@ -493,12 +510,14 @@ describe('Extract And Replace Script', () => {
                 '  }\n\n' +
                 '}';
 
-            fs.writeFileSync('TestScreen.js', originalFileContentWithANAttributeInsideObject);
+            fs.writeFileSync('TestScreen.js', originalFileContentWithAnAttributeInsideObject);
             fs.writeFileSync(jsonTestFileName, '{}');
 
-            parser.replaceStringsWithKeys(originalFileContentWithANAttributeInsideObject, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+            parser.replaceStringsWithKeys(
+                originalFileContentWithAnAttributeInsideObject,
+                'TestScreen.js', jsonTestFileName);
 
-            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContentWithANAttributeInsideObject);
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContentWithAnAttributeInsideObject);
         });
 
         it('should not replace style values', () => {
@@ -515,66 +534,128 @@ describe('Extract And Replace Script', () => {
             fs.writeFileSync('TestScreen.js', fileContentWithStyleValues);
             fs.writeFileSync(jsonTestFileName, '{}');
 
-            parser.replaceStringsWithKeys(fileContentWithStyleValues, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+            parser.replaceStringsWithKeys(fileContentWithStyleValues, 'TestScreen.js', jsonTestFileName);
 
             expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(fileContentWithStyleValues);
         });
 
-        it('should replace text inside function call', () => {
-            let originalFileContentWithANAttributeInsideObject = 'import React from "react";\n\n' +
-                'class TestClass extends React.Component {\n' +
-                '  render() {\n' +
-                '   CalendarUtil.schedule("Renew your Shapa subscription", options);\n' +
-                '  }\n' +
-                '}';
-            let expectedFileContentWithANAttributeInsideObject = 'import React from "react";\n\n' +
-                'class TestClass extends React.Component {\n' +
-                '  render() {\n' +
-                '    CalendarUtil.schedule(I18n.t("TestScreen.CallExpression.index(0)"), options);\n' +
-                '  }\n\n' +
-                '}';
+        it('should replace texts inside state assignment statement', () => {
+            let originalFileContentWithAStateAssignment = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n\n` +
+                `  constructor() {\n` +
+                `    this.state = {\n` +
+                `      errors: {\n` +
+                `        password: 'Some cool test string'\n` +
+                `      }\n` +
+                `    }\n` +
+                `  }\n\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `    <View></View>\n` +
+                `    );\n` +
+                `  }\n\n` +
+                `}`;
 
-            fs.writeFileSync('TestScreen.js', originalFileContentWithANAttributeInsideObject);
+            fs.writeFileSync('TestScreen.js', originalFileContentWithAStateAssignment);
+
+            let expectedFileContent = `import React from "react";\n\n` +
+                `class TestClass extends React.Component {\n` +
+                `  constructor() {\n` +
+                `    this.state = {\n` +
+                `      errors: {\n` +
+                `        password: I18n.t("TestScreen.ObjectProperty.index(0)")\n` +
+                `      }\n` +
+                `    };\n` +
+                `  }\n\n` +
+                `  render() {\n` +
+                `    return <View></View>;\n` +
+                `  }\n\n` +
+                `}`;
             fs.writeFileSync(jsonTestFileName, '{}');
 
-            parser.replaceStringsWithKeys(originalFileContentWithANAttributeInsideObject, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+            parser.replaceStringsWithKeys(
+                originalFileContentWithAStateAssignment,
+                'TestScreen.js',
+                jsonTestFileName
+            );
 
-            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContentWithANAttributeInsideObject);
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContent);
         });
 
-        it('should extract text from function call and object title with' +
-            ' zero index for difference type', () => {
-            let originalFileContentWithANAttributeInsideObject = 'import React from "react";\n\n' +
-                'class TestClass extends React.Component {\n' +
-                '  render() {\n' +
-                '   CalendarUtil.schedule("Renew your Shapa subscription", options);\n' +
-                '   CalendarUtil.schedule("Renew your Shapa subscription", options);\n' +
-                '    this.MODAL_CONTENT = {\n' +
-                '      title: "Shapa title",\n'+
-                '      title: "Shapa title(1)"\n'+
+        it('should ignore text in dimensions function call ', () => {
+            let fileContentWithDimensionFunction = 'import React from "react";\n' +
+                'const width = Dimensions.get("window");\n\n'+
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return <View></View>;\n` +
+                `  }\n\n` +
+                `}`;
 
-                '    };\n' +
-                '  }\n' +
-                '}';
-            let expectedFileContentWithANAttributeInsideObject = 'import React from "react";\n\n' +
-                'class TestClass extends React.Component {\n' +
-                '  render() {\n' +
-                '    CalendarUtil.schedule(I18n.t("TestScreen.CallExpression.index(0)"), options);\n' +
-                '    CalendarUtil.schedule(I18n.t("TestScreen.CallExpression.index(1)"), options);\n' +
-                '    this.MODAL_CONTENT = {\n' +
-                '      title: I18n.t("TestScreen.ObjectProperty.index(0)"),\n'+
-                '      title: I18n.t("TestScreen.ObjectProperty.index(1)")\n'+
-                '    };\n' +
-                '  }\n\n' +
-                '}';
-
-            fs.writeFileSync('TestScreen.js', originalFileContentWithANAttributeInsideObject);
+            fs.writeFileSync('TestScreen.js', fileContentWithDimensionFunction);
             fs.writeFileSync(jsonTestFileName, '{}');
 
-            parser.replaceStringsWithKeys(originalFileContentWithANAttributeInsideObject, 'TestScreen.js', jsonTestFileName, 'JSXAttribute');
+            parser.replaceStringsWithKeys(
+                fileContentWithDimensionFunction,
+                'TestScreen.js',
+                jsonTestFileName
+            );
 
-            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedFileContentWithANAttributeInsideObject);
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(fileContentWithDimensionFunction);
         });
 
+        it('should ignore text in emoji function call ', () => {
+            let fileContentWithDimensionFunction = 'import React from "react";\n' +
+                'const smileyEmoji = emoji.get("smiley");\n\n'+
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return <View></View>;\n` +
+                `  }\n\n` +
+                `}`;
+
+            fs.writeFileSync('TestScreen.js', fileContentWithDimensionFunction);
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            parser.replaceStringsWithKeys(
+                fileContentWithDimensionFunction,
+                'TestScreen.js',
+                jsonTestFileName
+            );
+
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(fileContentWithDimensionFunction);
+        });
+
+        it('should replace text in object declaration in side variable declaration ', () => {
+            let originalfileContentWithVariableDeclaration = 'import React from "react";\n' +
+                'const darkGrayCopyOptions = [{\n' +
+                '  A: "Small steps can get a revolution started!",\n' +
+                '  B: "Starting with your mission today:"\n' +
+                '}];\n\n'+
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return <View></View>;\n` +
+                `  }\n\n` +
+                `}`;
+            let expectedfileContentWithVariableDeclaration = 'import React from "react";\n' +
+                'const darkGrayCopyOptions = [{\n' +
+                '  A: I18n.t("TestScreen.ObjectProperty.index(0)"),\n' +
+                '  B: I18n.t("TestScreen.ObjectProperty.index(1)")\n' +
+                '}];\n\n'+
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return <View></View>;\n` +
+                `  }\n\n` +
+                `}`;
+
+            fs.writeFileSync('TestScreen.js', originalfileContentWithVariableDeclaration);
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            parser.replaceStringsWithKeys(
+                originalfileContentWithVariableDeclaration,
+                'TestScreen.js',
+                jsonTestFileName
+            );
+
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedfileContentWithVariableDeclaration);
+        });
     })
 });

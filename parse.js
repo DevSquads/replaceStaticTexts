@@ -14,7 +14,16 @@ const writeToFile = (jsFileName, newFileContent) => {
     fs.writeFileSync('output/' + jsFileName, newFileContent.code);
 };
 
+function isVisited(visitedNodePaths, path) {
+    if (!visitedNodePaths[getNodePath(path)]) {
+        visitedNodePaths[getNodePath(path)] = true;
+        return false;
+    }
+    return true;
+}
+
 const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
+    let visitedNodePaths = {};
     let astVisitors = {
         JSXText(path) {
             opts.jsxTextNodeProcessor(path, opts.processedObject);
@@ -22,7 +31,9 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
         JSXExpressionContainer(path) {
             path.traverse({
                 StringLiteral(path) {
-                    opts.jsxExpressionContainerNodeProcessor(path, opts.processedObject);
+                    if (!isVisited(visitedNodePaths, path)) {
+                        opts.jsxExpressionContainerNodeProcessor(path, opts.processedObject);
+                    }
                 }
             })
         },
@@ -32,7 +43,9 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                     if (path.node.name.name === 'title') {
                         path.traverse({
                             StringLiteral(path) {
-                                opts.jsxTitleAttributeNodeProcessor(path, opts.processedObject);
+                                if (!isVisited(visitedNodePaths, path)) {
+                                    opts.jsxTitleAttributeNodeProcessor(path, opts.processedObject);
+                                }
                             }
                         })
 
@@ -41,7 +54,9 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
             })
         },
         TemplateElement(path) {
-            opts.templateElementNodeProcessor(path, opts.processedObject);
+            if (!isVisited(visitedNodePaths, path)) {
+                opts.templateElementNodeProcessor(path, opts.processedObject);
+            }
         },
         ConditionalExpression(path) {
             let notARequireStatement = true;
@@ -56,7 +71,9 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
             if (notARequireStatement) {
                 path.traverse({
                     StringLiteral(path) {
-                        opts.conditionalExpressionNodeProcessor(path, opts.processedObject);
+                        if (!isVisited(visitedNodePaths, path)) {
+                            opts.conditionalExpressionNodeProcessor(path, opts.processedObject);
+                        }
                     }
                 });
             }
@@ -76,32 +93,60 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                     ObjectProperty(path) {
                         path.traverse({
                             StringLiteral(path) {
-                                opts.objectPropertyNodeProcessor(path, opts.processedObject);
+                                if (!isVisited(visitedNodePaths, path)) {
+                                    opts.objectPropertyNodeProcessor(path, opts.processedObject);
+                                }
                             }
                         })
                     }
                 });
             }
         },
-        CallExpression(path) {
-            let notARequireStatement = true;
+        VariableDeclaration(path) {
+            let notAStyleSheet = true;
             path.traverse({
                 Identifier(path) {
-                    if(path.node.name === 'require'){
-                        notARequireStatement = false;
+                    if (path.node.name === 'StyleSheet') {
+                        notAStyleSheet = false;
                         return;
                     }
-                },
-                ObjectExpression(path) {
-                        notARequireStatement = false;
-                        return;
                 }
             });
-            if (notARequireStatement) {
+            if (notAStyleSheet) {
+                path.traverse({
+                    ObjectProperty(path) {
+                        path.traverse({
+                            StringLiteral(path) {
+                                if (!isVisited(visitedNodePaths, path)) {
+                                    opts.objectPropertyNodeProcessor(path, opts.processedObject);
+                                }
+                            }
+                        })
+                    }
+                })
+            }
+        },
+        CallExpression(path) {
+            let notARequireStatementOrStyleSheet = true;
+            path.traverse({
+                Identifier(path) {
+                    if (path.node.name === 'require' ||
+                        path.node.name === 'StyleSheet' ||
+                        path.node.name === 'Dimensions' ||
+                        path.node.name === 'emoji') {
+                        notARequireStatementOrStyleSheet = false;
+                        return;
+                    }
+                }
+            });
+            if (notARequireStatementOrStyleSheet) {
                 path.traverse({
                     StringLiteral(path) {
-                        if (path.getPathLocation().includes('arguments'))
-                            opts.callExpressionNodeProcessor(path, opts.processedObject);
+                        if (path.getPathLocation().includes('arguments')) {
+                            if (!isVisited(visitedNodePaths, path)) {
+                                opts.callExpressionNodeProcessor(path, opts.processedObject);
+                            }
+                        }
                     }
                 })
             }
@@ -152,20 +197,20 @@ exports.extractStrings = jsFileContent => {
         },
         conditionalExpressionNodeProcessor(path, extractedStringsWithTypeAndPath) {
             if (path.getPathLocation().includes('alternate') || path.getPathLocation().includes('consequent')) {
-                if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
+                if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
                     let nodePath = getNodePath(path);
                     extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, CONDITIONAL_EXPRESSION_TYPE));
                 }
             }
         },
         objectPropertyNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
+            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
                 let nodePath = getNodePath(path);
                 extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, OBJECT_PROPERTY_TYPE));
             }
         },
         callExpressionNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
+            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
                 let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
                 extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, CALL_EXPRESSION_TYPE));
             }
@@ -216,20 +261,20 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
         },
         conditionalExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
             if (path.getPathLocation().includes('alternate') || path.getPathLocation().includes('consequent')) {
-                if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
+                if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
                     path.node.extra.raw = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
                     extractedStringsWithKeyAndPath.shift();
                 }
             }
         },
         objectPropertyNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
+            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
                 path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
                 extractedStringsWithKeyAndPath.shift();
             }
         },
         callExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            if (exports.cleanUpExtractedString(path.node.extra.raw).length !== 0) {
+            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
                 path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
                 extractedStringsWithKeyAndPath.shift();
             }
@@ -330,10 +375,14 @@ const walkSync = function (dir, filelist) {
 };
 
 (function main() {
-    let dirPath = '/home/xamohsen/devsquads/shapa-react-native/src/components';
+    ///Users/omar/WebstormProjects/parser-test/output/MissionAdvertHeader.js
+    let dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src/components';
+    if (!fs.existsSync('output')) {
+        fs.mkdirSync('output');
+    }
     let files = walkSync(dirPath, []);
     files.forEach(jsFilePath => {
-            if (jsFilePath.endsWith('.js')) {
+            if (jsFilePath.endsWith('MissionAdvertHeader.js')) {
                 let jsFileName = jsFilePath.split('/').reverse()[0];
                 let jsonFilePath = 'en.json';
                 let jsFileContent = exports.readJsFileContent(jsFilePath);
