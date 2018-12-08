@@ -128,6 +128,9 @@ exports.readJsFileContent = jsFileName => {
 };
 
 exports.cleanUpExtractedString = extractedString => {
+    if(extractedString === ':') {
+        return '';
+    }
     return extractedString.replace(/[\t\n]+/gm, ' ').trim();
 };
 
@@ -165,7 +168,12 @@ const shouldBeIgnored = path => {
         'editingMode',
         'config',
         'loading',
-        'require'
+        'require',
+        'animated',
+        'side',
+        'endOf',
+        'animationType',
+        'backgroundColor',
     ];
     return ignoredPaths.includes(path.node.name);
 };
