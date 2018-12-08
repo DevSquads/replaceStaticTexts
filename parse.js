@@ -4,12 +4,18 @@ const babelGenerator = require('@babel/generator');
 const fs = require("fs");
 
 const JSX_TEXT_TYPE = 'JSXText';
-const JSX_EXPERESSION_TYPE = 'JSXExpressionContainer';
+const JSX_EXPRESSION_TYPE = 'JSXExpressionContainer';
 const JSX_ATTRIBUTE_TYPE = 'JSXAttribute';
 const TEMPLATE_ELEMENT = 'TemplateElement';
 const CONDITIONAL_EXPRESSION_TYPE = 'ConditionalExpression';
 const OBJECT_PROPERTY_TYPE = 'ObjectProperty';
 const CALL_EXPRESSION_TYPE = 'CallExpression';
+
+exports.writeImportStatementToJsFile = (jsFilePath, fileContent) => {
+    let i18nPath = jsFilePath.substring(0, jsFilePath.indexOf('src') + 3) + '/services/internationalizations/i18n';
+    fileContent = `import I18n from "${i18nPath}";\n` + fileContent;
+    return fileContent;
+};
 
 exports.extractStrings = jsFileContent => {
     let nodeProcessors = {
@@ -22,7 +28,7 @@ exports.extractStrings = jsFileContent => {
 
         jsxExpressionContainerNodeProcessor(path, extractedStringsWithTypeAndPath) {
             let nodePath = getNodePath(path);
-            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_EXPERESSION_TYPE));
+            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_EXPRESSION_TYPE));
         },
 
         jsxTitleAttributeNodeProcessor(path, extractedStringsWithTypeAndPath) {
@@ -50,8 +56,11 @@ exports.extractStrings = jsFileContent => {
     return traverseAndProcessAbstractSyntaxTree(jsFileContent, nodeProcessors);
 };
 
-exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
+exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFilePath = '') => {
     let extractedStrings = exports.extractStrings(fileContent);
+    if (extractedStrings.length) {
+        fileContent = exports.writeImportStatementToJsFile(jsFilePath, fileContent);
+    }
     let extractedStringsWithKeyAndPath = exports.writeToJsonFile(jsonFileName, jsFileName, extractedStrings);
     let parsedTree = getParsedTree(fileContent);
 
@@ -128,7 +137,7 @@ exports.readJsFileContent = jsFileName => {
 };
 
 exports.cleanUpExtractedString = extractedString => {
-    if(extractedString === ':') {
+    if (extractedString === ':') {
         return '';
     }
     return extractedString.replace(/[\t\n]+/gm, ' ').trim();
@@ -434,13 +443,13 @@ const walkSync = (dir, filelist) => {
     }
     let files = walkSync(dirPath, []);
     files.forEach(jsFilePath => {
-            if (jsFilePath.endsWith('.js')) {
+            if (jsFilePath.endsWith('.js') && !jsFilePath.endsWith('LanguageSetting.js')) {
                 let jsFileName = jsFilePath.split('/').reverse()[1] + '_' + jsFilePath.split('/').reverse()[0];
                 let jsonFilePath = 'en.json';
                 let jsFileContent = exports.readJsFileContent(jsFilePath);
                 console.log(jsFileName);
-                exports.replaceStringsWithKeys(jsFileContent, jsFileName, jsonFilePath);
+                exports.replaceStringsWithKeys(jsFileContent, jsFileName, jsonFilePath, jsFilePath);
             }
         }
     );
-})();
+});

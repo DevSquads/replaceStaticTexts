@@ -52,7 +52,9 @@ describe('Extract And Replace Script', () => {
                 fs.unlinkSync('output/' + files[i]);
             }
             fs.rmdirSync('output');
-            fs.unlinkSync('TestScreen.js');
+            if(fs.existsSync('TestScreen.js')) {
+                fs.unlinkSync('TestScreen.js');
+            }
         });
 
         it('should read a js file', () => {
@@ -64,6 +66,35 @@ describe('Extract And Replace Script', () => {
             expect(fileContent).to.eql(jsFileContent);
 
             fs.unlinkSync(jsTestFileName);
+        });
+
+        it('should write import statement to the begging of js file', () => {
+            let originalJsFileContent = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `          <Text>Hello, world!</Text>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+
+            let expectedJsFileContent = 'import I18n from "some/path/along/the/src/services/internationalizations/i18n";\n' +
+                `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `          <Text>Hello, world!</Text>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+
+            let actualFileContent = parser.writeImportStatementToJsFile(
+                'some/path/along/the/src/TestScreen.js',
+                originalJsFileContent
+            );
+
+
+            expect(actualFileContent).to.eql(expectedJsFileContent);
         });
 
         it('should clean up the extracted string from all tabs and newlines', () => {
@@ -142,7 +173,8 @@ describe('Extract And Replace Script', () => {
         });
 
         it('should replace the extracted JSXText strings with generated key', () => {
-            let modifiedFileContent = `import React from "react";\n` +
+            let modifiedFileContent = 'import I18n from "/services/internationalizations/i18n";\n' +
+                `import React from "react";\n` +
                 `\n` +
                 `class TestClass extends React.Component {\n` +
                 `  render() {\n` +
@@ -161,7 +193,8 @@ describe('Extract And Replace Script', () => {
         });
 
         it('should replace the extracted ExpressionText strings with generated key', () => {
-            let modifiedFileContent = `import React from "react";\n` +
+            let modifiedFileContent = 'import I18n from "/services/internationalizations/i18n";\n' +
+                `import React from "react";\n` +
                 `\n` +
                 `class TestClass extends React.Component {\n` +
                 `  render() {\n` +
@@ -318,7 +351,8 @@ describe('Extract And Replace Script', () => {
 
             fs.writeFileSync('TestScreen.js', originalFileContentWithATitleProp);
 
-            let expectedFileContent = `import React from "react";\n\n` +
+            let expectedFileContent = 'import I18n from "/services/internationalizations/i18n";\n' +
+                `import React from "react";\n\n` +
                 `class TestClass extends React.Component {\n` +
                 `  render() {\n` +
                 `    return <View>\n` +
@@ -357,7 +391,8 @@ describe('Extract And Replace Script', () => {
 
             fs.writeFileSync('TestScreen.js', originalFileContentWithATitleProp);
 
-            let expectedFileContent = `import React from "react";\n\n` +
+            let expectedFileContent = 'import I18n from "/services/internationalizations/i18n";\n' +
+                `import React from "react";\n\n` +
                 `class TestClass extends React.Component {\n` +
                 `  render() {\n` +
                 `    return <View>\n` +
@@ -396,7 +431,8 @@ describe('Extract And Replace Script', () => {
 
             fs.writeFileSync('TestScreen.js', originalFileContentWithATitleProp);
 
-            let expectedFileContent = `import React from "react";\n\n` +
+            let expectedFileContent = 'import I18n from "/services/internationalizations/i18n";\n' +
+                `import React from "react";\n\n` +
                 `class TestClass extends React.Component {\n` +
                 `  render() {\n` +
                 `    return <View>\n` +
@@ -420,7 +456,8 @@ describe('Extract And Replace Script', () => {
         });
 
         it('should not throw an exception when faced with an empty expression', () => {
-            let originalFileContentWithASelfClosingElement = `import React from "react";\n` +
+            let originalFileContentWithASelfClosingElement = 'import I18n from "/services/internationalizations/i18n";\n' +
+                `import React from "react";\n` +
                 `class TestClass extends React.Component {\n` +
                 `  render() {\n` +
                 `    return (\n` +
@@ -454,7 +491,8 @@ describe('Extract And Replace Script', () => {
 
             fs.writeFileSync('TestScreen.js', originalFileContentWithATitleProp);
 
-            let expectedFileContent = `import React from "react";\n\n` +
+            let expectedFileContent = 'import I18n from "/services/internationalizations/i18n";\n' +
+                `import React from "react";\n\n` +
                 `class TestClass extends React.Component {\n` +
                 `  someObject = someCondition ? [{I18n.t("TestScreen.ConditionalExpression.index(0)")}] : [{I18n.t("TestScreen.ConditionalExpression.index(1)")}];\n\n` +
                 `  render() {\n` +
@@ -501,7 +539,8 @@ describe('Extract And Replace Script', () => {
                 '  }\n' +
                 ' }\n' +
                 '}';
-            let expectedFileContentWithAnAttributeInsideObject = 'import React from "react";\n\n' +
+            let expectedFileContentWithAnAttributeInsideObject = 'import I18n from "/services/internationalizations/i18n";\n' +
+                'import React from "react";\n\n' +
                 'class TestClass extends React.Component {\n' +
                 '  render() {\n' +
                 '    this.MODAL_CONTENT = {\n' +
@@ -558,7 +597,8 @@ describe('Extract And Replace Script', () => {
 
             fs.writeFileSync('TestScreen.js', originalFileContentWithAStateAssignment);
 
-            let expectedFileContent = `import React from "react";\n\n` +
+            let expectedFileContent = 'import I18n from "/services/internationalizations/i18n";\n' +
+                `import React from "react";\n\n` +
                 `class TestClass extends React.Component {\n` +
                 `  constructor() {\n` +
                 `    this.state = {\n` +
@@ -615,7 +655,7 @@ describe('Extract And Replace Script', () => {
                 'const ignoredCase5 = OS.get("smiley");\n' +
                 'const ignoredCase6 = moment.get("smiley");\n' +
                 'const ignoredCase7 = utcMoment.get("smiley");\n' +
-                'const ignoredCase8 = OS.handleChangedInput("string");\n'+
+                'const ignoredCase8 = OS.handleChangedInput("string");\n' +
                 'const ignoredCase9 = OS.addEventListener("string");\n' +
                 'const ignoredCase10 = OS.removeEventListener("string");\n' +
                 'const ignoredCase11 = OS.PropTypes("string");\n\n' +
@@ -650,7 +690,8 @@ describe('Extract And Replace Script', () => {
                 `    return <View></View>;\n` +
                 `  }\n\n` +
                 `}`;
-            let expectedfileContentWithVariableDeclaration = 'import React from "react";\n' +
+            let expectedfileContentWithVariableDeclaration = 'import I18n from "/services/internationalizations/i18n";\n' +
+                'import React from "react";\n' +
                 'const darkGrayCopyOptions = [{\n' +
                 '  A: I18n.t("TestScreen.ObjectProperty.index(0)"),\n' +
                 '  B: I18n.t("TestScreen.ObjectProperty.index(1)")\n' +
