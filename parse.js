@@ -10,24 +10,144 @@ const TEMPLATE_ELEMENT = 'TemplateElement';
 const CONDITIONAL_EXPRESSION_TYPE = 'ConditionalExpression';
 const OBJECT_PROPERTY_TYPE = 'ObjectProperty';
 const CALL_EXPRESSION_TYPE = 'CallExpression';
+
+exports.extractStrings = jsFileContent => {
+    let nodeProcessors = {
+        parsedTree: getParsedTree(jsFileContent),
+        processedObject: [],
+        jsxTextNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            let nodePath = getNodePath(path);
+            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.toString(), JSX_TEXT_TYPE));
+        },
+
+        jsxExpressionContainerNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            let nodePath = getNodePath(path);
+            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_EXPERESSION_TYPE));
+        },
+
+        jsxTitleAttributeNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            let nodePath = getNodePath(path);
+            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_ATTRIBUTE_TYPE));
+        },
+        templateElementNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            let nodePath = getNodePath(path);
+            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.raw, TEMPLATE_ELEMENT));
+        },
+        conditionalExpressionNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            let nodePath = getNodePath(path);
+            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, CONDITIONAL_EXPRESSION_TYPE));
+        },
+        objectPropertyNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            let nodePath = getNodePath(path);
+            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, OBJECT_PROPERTY_TYPE));
+        },
+        callExpressionNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, CALL_EXPRESSION_TYPE));
+        }
+    };
+
+    return traverseAndProcessAbstractSyntaxTree(jsFileContent, nodeProcessors);
+};
+
+exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
+    let extractedStrings = exports.extractStrings(fileContent);
+    let extractedStringsWithKeyAndPath = exports.writeToJsonFile(jsonFileName, jsFileName, extractedStrings);
+    let parsedTree = getParsedTree(fileContent);
+
+    let nodeProcessors = {
+        parsedTree: parsedTree,
+        processedObject: extractedStringsWithKeyAndPath,
+        jsxTextNodeProcessor(path, extractedStringsWithKeyAndPath) {
+            if (extractedStringsWithKeyAndPath[0].value === path.node.value) {
+                path.node.value = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
+                extractedStringsWithKeyAndPath.shift();
+            }
+        },
+        jsxExpressionContainerNodeProcessor(path, extractedStringsWithKeyAndPath) {
+            if (extractedStringsWithKeyAndPath[0].value === path.node.value) {
+                path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
+                extractedStringsWithKeyAndPath.shift();
+            }
+        },
+        jsxTitleAttributeNodeProcessor(path, extractedStringsWithKeyAndPath) {
+            if (path.getPathLocation().includes('expression')) {
+                path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
+            } else {
+                path.node.extra.raw = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
+            }
+            extractedStringsWithKeyAndPath.shift();
+        },
+        templateElementNodeProcessor(path, extractedStringsWithKeyAndPath) {
+            path.node.value.raw = "${I18n.t(\"" + `${extractedStringsWithKeyAndPath[0].key}` + "\")}";
+            extractedStringsWithKeyAndPath.shift();
+        },
+        conditionalExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
+            path.node.extra.raw = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
+            extractedStringsWithKeyAndPath.shift();
+        }
+        ,
+        objectPropertyNodeProcessor(path, extractedStringsWithKeyAndPath) {
+            path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
+            extractedStringsWithKeyAndPath.shift();
+        }
+        ,
+        callExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
+            path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
+            extractedStringsWithKeyAndPath.shift();
+        }
+    };
+
+    traverseAndProcessAbstractSyntaxTree(fileContent, nodeProcessors);
+
+    let newFileContent = babelGenerator.default(parsedTree, {sourceMap: true}, fileContent);
+    writeToFile(jsFileName, newFileContent);
+    return newFileContent.code;
+};
+exports.writeToJsonFile = (jsonFileName, jsFileName, extractedStrings) => {
+    let extractedStringsWithKeyAndPath = [];
+    let jsonFileContent = getJsonDictObject(jsonFileName);
+    let jsxTypeCount = {};
+
+    for (let index = 0; index < extractedStrings.length; index += 1) {
+        if (extractedStrings[index].type in jsxTypeCount) {
+            jsxTypeCount[extractedStrings[index].type] += 1;
+        } else {
+            jsxTypeCount[extractedStrings[index].type] = 1;
+        }
+        insertNewEntryInJsonObject(jsFileName, extractedStrings, index, jsonFileContent, extractedStringsWithKeyAndPath, jsxTypeCount[extractedStrings[index].type]);
+    }
+
+    writeToJsonFileWithIndentation(jsonFileName, jsonFileContent);
+    return extractedStringsWithKeyAndPath;
+};
+
+exports.readJsFileContent = jsFileName => {
+    return fs.readFileSync(jsFileName, 'utf8');
+};
+
+exports.cleanUpExtractedString = extractedString => {
+    return extractedString.replace(/[\t\n]+/gm, ' ').trim();
+};
+
 const writeToFile = (jsFileName, newFileContent) => {
     fs.writeFileSync('output/' + jsFileName, newFileContent.code);
 };
 
-function isVisited(visitedNodePaths, path) {
+const isVisited = (visitedNodePaths, path) => {
     if (!visitedNodePaths[getNodePath(path)]) {
         visitedNodePaths[getNodePath(path)] = true;
         return false;
     }
     return true;
-}
+};
 
-function shouldBeIgnored(path) {
+const shouldBeIgnored = path => {
     return path.node.name === 'require' ||
         path.node.name === 'StyleSheet' ||
         path.node.name === 'Dimensions' ||
         path.node.name === 'emoji';
-}
+};
 
 const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
     let visitedNodePaths = {};
@@ -182,104 +302,9 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
     return opts.processedObject;
 };
 
-function getNodePath(path) {
+const getNodePath = path => {
     return path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
-}
-
-exports.extractStrings = jsFileContent => {
-    let nodeProcessors = {
-        parsedTree: getParsedTree(jsFileContent),
-        processedObject: [],
-        jsxTextNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            let nodePath = getNodePath(path);
-            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.toString(), JSX_TEXT_TYPE));
-        },
-
-        jsxExpressionContainerNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            let nodePath = getNodePath(path);
-            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_EXPERESSION_TYPE));
-        },
-
-        jsxTitleAttributeNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            let nodePath = getNodePath(path);
-            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_ATTRIBUTE_TYPE));
-        },
-        templateElementNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            let nodePath = getNodePath(path);
-            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.raw, TEMPLATE_ELEMENT));
-        },
-        conditionalExpressionNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            let nodePath = getNodePath(path);
-            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, CONDITIONAL_EXPRESSION_TYPE));
-        },
-        objectPropertyNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            let nodePath = getNodePath(path);
-            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, OBJECT_PROPERTY_TYPE));
-        },
-        callExpressionNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
-            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, CALL_EXPRESSION_TYPE));
-        }
-    };
-
-    return traverseAndProcessAbstractSyntaxTree(jsFileContent, nodeProcessors);
 };
-
-exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
-    let extractedStrings = exports.extractStrings(fileContent);
-    let extractedStringsWithKeyAndPath = exports.writeToJsonFile(jsonFileName, jsFileName, extractedStrings);
-    let parsedTree = getParsedTree(fileContent);
-
-    let nodeProcessors = {
-        parsedTree: parsedTree,
-        processedObject: extractedStringsWithKeyAndPath,
-        jsxTextNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            if (extractedStringsWithKeyAndPath[0].value === path.node.value) {
-                path.node.value = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
-                extractedStringsWithKeyAndPath.shift();
-            }
-        },
-        jsxExpressionContainerNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            if (extractedStringsWithKeyAndPath[0].value === path.node.value) {
-                path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-                extractedStringsWithKeyAndPath.shift();
-            }
-        },
-        jsxTitleAttributeNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            if (path.getPathLocation().includes('expression')) {
-                path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-            } else {
-                path.node.extra.raw = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
-            }
-            extractedStringsWithKeyAndPath.shift();
-        },
-        templateElementNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            path.node.value.raw = "${I18n.t(\"" + `${extractedStringsWithKeyAndPath[0].key}` + "\")}";
-            extractedStringsWithKeyAndPath.shift();
-        },
-        conditionalExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            path.node.extra.raw = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
-            extractedStringsWithKeyAndPath.shift();
-        }
-        ,
-        objectPropertyNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-            extractedStringsWithKeyAndPath.shift();
-        }
-        ,
-        callExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-            extractedStringsWithKeyAndPath.shift();
-        }
-    };
-
-    traverseAndProcessAbstractSyntaxTree(fileContent, nodeProcessors);
-
-    let newFileContent = babelGenerator.default(parsedTree, {sourceMap: true}, fileContent);
-    writeToFile(jsFileName, newFileContent);
-    return newFileContent.code;
-}
-;
 
 const getJsonDictObject = jsonFileName => {
     let fileContent = exports.readJsFileContent(jsonFileName);
@@ -307,34 +332,8 @@ const insertNewEntryInJsonObject = (fileName, extractedStrings, index, jsonFileC
     });
 };
 
-writeToJsonFileWithIndentation = (jsonFileName, jsonFileContent) => {
+const writeToJsonFileWithIndentation = (jsonFileName, jsonFileContent) => {
     fs.writeFileSync(jsonFileName, JSON.stringify(jsonFileContent, null, 4));
-};
-
-exports.writeToJsonFile = (jsonFileName, jsFileName, extractedStrings) => {
-    let extractedStringsWithKeyAndPath = [];
-    let jsonFileContent = getJsonDictObject(jsonFileName);
-    let jsxTypeCount = {};
-
-    for (let index = 0; index < extractedStrings.length; index += 1) {
-        if (extractedStrings[index].type in jsxTypeCount) {
-            jsxTypeCount[extractedStrings[index].type] += 1;
-        } else {
-            jsxTypeCount[extractedStrings[index].type] = 1;
-        }
-        insertNewEntryInJsonObject(jsFileName, extractedStrings, index, jsonFileContent, extractedStringsWithKeyAndPath, jsxTypeCount[extractedStrings[index].type]);
-    }
-
-    writeToJsonFileWithIndentation(jsonFileName, jsonFileContent);
-    return extractedStringsWithKeyAndPath;
-};
-
-exports.readJsFileContent = jsFileName => {
-    return fs.readFileSync(jsFileName, 'utf8');
-};
-
-exports.cleanUpExtractedString = extractedString => {
-    return extractedString.replace(/[\t\n]+/gm, ' ').trim();
 };
 
 const getParsedTree = jsFileContent => {
@@ -354,7 +353,7 @@ const constructStringObject = (textKey, extractedText, stringType) => {
     };
 };
 
-const walkSync = function (dir, filelist) {
+const walkSync = (dir, filelist) => {
     let files = fs.readdirSync(dir);
     filelist = filelist || [];
     files.forEach(function (file) {
