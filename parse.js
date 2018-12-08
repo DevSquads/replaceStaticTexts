@@ -22,17 +22,31 @@ function isVisited(visitedNodePaths, path) {
     return true;
 }
 
+function shouldBeIgnored(path) {
+    return path.node.name === 'require' ||
+        path.node.name === 'StyleSheet' ||
+        path.node.name === 'Dimensions' ||
+        path.node.name === 'emoji';
+}
+
 const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
     let visitedNodePaths = {};
     let astVisitors = {
         JSXText(path) {
-            opts.jsxTextNodeProcessor(path, opts.processedObject);
+            if (exports.cleanUpExtractedString(path.node.value).length !== 0) {
+                opts.jsxTextNodeProcessor(path, opts.processedObject);
+            }
         },
         JSXExpressionContainer(path) {
             path.traverse({
                 StringLiteral(path) {
-                    if (!isVisited(visitedNodePaths, path)) {
-                        opts.jsxExpressionContainerNodeProcessor(path, opts.processedObject);
+                    let nodePath = getNodePath(path);
+                    if (!nodePath.includes('attribute')) {
+                        if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
+                            if (!isVisited(visitedNodePaths, path)) {
+                                opts.jsxExpressionContainerNodeProcessor(path, opts.processedObject);
+                            }
+                        }
                     }
                 }
             })
@@ -44,7 +58,9 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                         path.traverse({
                             StringLiteral(path) {
                                 if (!isVisited(visitedNodePaths, path)) {
-                                    opts.jsxTitleAttributeNodeProcessor(path, opts.processedObject);
+                                    if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
+                                        opts.jsxTitleAttributeNodeProcessor(path, opts.processedObject);
+                                    }
                                 }
                             }
                         })
@@ -55,14 +71,16 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
         },
         TemplateElement(path) {
             if (!isVisited(visitedNodePaths, path)) {
-                opts.templateElementNodeProcessor(path, opts.processedObject);
+                if (exports.cleanUpExtractedString(path.node.value.raw).length !== 0) {
+                    opts.templateElementNodeProcessor(path, opts.processedObject);
+                }
             }
         },
         ConditionalExpression(path) {
             let notARequireStatement = true;
             path.traverse({
                 Identifier(path) {
-                    if (path.node.name === 'require') {
+                    if (shouldBeIgnored(path)) {
                         notARequireStatement = false;
                         return;
                     }
@@ -72,7 +90,11 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                 path.traverse({
                     StringLiteral(path) {
                         if (!isVisited(visitedNodePaths, path)) {
-                            opts.conditionalExpressionNodeProcessor(path, opts.processedObject);
+                            if (path.getPathLocation().includes('alternate') || path.getPathLocation().includes('consequent')) {
+                                if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
+                                    opts.conditionalExpressionNodeProcessor(path, opts.processedObject);
+                                }
+                            }
                         }
                     }
                 });
@@ -94,7 +116,9 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                         path.traverse({
                             StringLiteral(path) {
                                 if (!isVisited(visitedNodePaths, path)) {
-                                    opts.objectPropertyNodeProcessor(path, opts.processedObject);
+                                    if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
+                                        opts.objectPropertyNodeProcessor(path, opts.processedObject);
+                                    }
                                 }
                             }
                         })
@@ -127,24 +151,23 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
             }
         },
         CallExpression(path) {
-            let notARequireStatementOrStyleSheet = true;
+            let shouldNotBeIgnored = true;
             path.traverse({
                 Identifier(path) {
-                    if (path.node.name === 'require' ||
-                        path.node.name === 'StyleSheet' ||
-                        path.node.name === 'Dimensions' ||
-                        path.node.name === 'emoji') {
-                        notARequireStatementOrStyleSheet = false;
+                    if (shouldBeIgnored(path)) {
+                        shouldNotBeIgnored = false;
                         return;
                     }
                 }
             });
-            if (notARequireStatementOrStyleSheet) {
+            if (shouldNotBeIgnored) {
                 path.traverse({
                     StringLiteral(path) {
                         if (path.getPathLocation().includes('arguments')) {
                             if (!isVisited(visitedNodePaths, path)) {
-                                opts.callExpressionNodeProcessor(path, opts.processedObject);
+                                if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
+                                    opts.callExpressionNodeProcessor(path, opts.processedObject);
+                                }
                             }
                         }
                     }
@@ -168,52 +191,34 @@ exports.extractStrings = jsFileContent => {
         parsedTree: getParsedTree(jsFileContent),
         processedObject: [],
         jsxTextNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            if (exports.cleanUpExtractedString(path.node.value).length !== 0) {
-                let nodePath = getNodePath(path);
-                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.toString(), JSX_TEXT_TYPE));
-            }
+            let nodePath = getNodePath(path);
+            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.toString(), JSX_TEXT_TYPE));
         },
 
         jsxExpressionContainerNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                let nodePath = getNodePath(path);
-                if (!nodePath.includes('attribute')) {
-                    extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_EXPERESSION_TYPE));
-                }
-            }
+            let nodePath = getNodePath(path);
+            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_EXPERESSION_TYPE));
         },
 
         jsxTitleAttributeNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                let nodePath = getNodePath(path);
-                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_ATTRIBUTE_TYPE));
-            }
+            let nodePath = getNodePath(path);
+            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, JSX_ATTRIBUTE_TYPE));
         },
         templateElementNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            if (exports.cleanUpExtractedString(path.node.value.raw).length !== 0) {
-                let nodePath = getNodePath(path);
-                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.raw, TEMPLATE_ELEMENT));
-            }
+            let nodePath = getNodePath(path);
+            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.value.raw, TEMPLATE_ELEMENT));
         },
         conditionalExpressionNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            if (path.getPathLocation().includes('alternate') || path.getPathLocation().includes('consequent')) {
-                if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                    let nodePath = getNodePath(path);
-                    extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, CONDITIONAL_EXPRESSION_TYPE));
-                }
-            }
+            let nodePath = getNodePath(path);
+            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, CONDITIONAL_EXPRESSION_TYPE));
         },
         objectPropertyNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                let nodePath = getNodePath(path);
-                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, OBJECT_PROPERTY_TYPE));
-            }
+            let nodePath = getNodePath(path);
+            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, OBJECT_PROPERTY_TYPE));
         },
         callExpressionNodeProcessor(path, extractedStringsWithTypeAndPath) {
-            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
-                extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, CALL_EXPRESSION_TYPE));
-            }
+            let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, CALL_EXPRESSION_TYPE));
         }
     };
 
@@ -229,55 +234,42 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
         parsedTree: parsedTree,
         processedObject: extractedStringsWithKeyAndPath,
         jsxTextNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            if (exports.cleanUpExtractedString(path.node.value).length !== 0 && extractedStringsWithKeyAndPath[0].value === path.node.value) {
+            if (extractedStringsWithKeyAndPath[0].value === path.node.value) {
                 path.node.value = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
                 extractedStringsWithKeyAndPath.shift();
             }
         },
         jsxExpressionContainerNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            let nodePath = getNodePath(path);
-            if (!nodePath.includes('attribute')) {
-                if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0 && extractedStringsWithKeyAndPath[0].value === path.node.value) {
-                    path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-                    extractedStringsWithKeyAndPath.shift();
-                }
+            if (extractedStringsWithKeyAndPath[0].value === path.node.value) {
+                path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
+                extractedStringsWithKeyAndPath.shift();
             }
         },
         jsxTitleAttributeNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                if (path.getPathLocation().includes('expression')) {
-                    path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-                } else {
-                    path.node.extra.raw = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
-                }
-                extractedStringsWithKeyAndPath.shift();
+            if (path.getPathLocation().includes('expression')) {
+                path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
+            } else {
+                path.node.extra.raw = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
             }
+            extractedStringsWithKeyAndPath.shift();
         },
         templateElementNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            if (exports.cleanUpExtractedString(path.node.value.raw).length !== 0) {
-                path.node.value.raw = "${I18n.t(\"" + `${extractedStringsWithKeyAndPath[0].key}` + "\")}";
-                extractedStringsWithKeyAndPath.shift();
-            }
+            path.node.value.raw = "${I18n.t(\"" + `${extractedStringsWithKeyAndPath[0].key}` + "\")}";
+            extractedStringsWithKeyAndPath.shift();
         },
         conditionalExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            if (path.getPathLocation().includes('alternate') || path.getPathLocation().includes('consequent')) {
-                if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                    path.node.extra.raw = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
-                    extractedStringsWithKeyAndPath.shift();
-                }
-            }
-        },
+            path.node.extra.raw = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
+            extractedStringsWithKeyAndPath.shift();
+        }
+        ,
         objectPropertyNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-                extractedStringsWithKeyAndPath.shift();
-            }
-        },
+            path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
+            extractedStringsWithKeyAndPath.shift();
+        }
+        ,
         callExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-                extractedStringsWithKeyAndPath.shift();
-            }
+            path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
+            extractedStringsWithKeyAndPath.shift();
         }
     };
 
@@ -286,7 +278,8 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
     let newFileContent = babelGenerator.default(parsedTree, {sourceMap: true}, fileContent);
     writeToFile(jsFileName, newFileContent);
     return newFileContent.code;
-};
+}
+;
 
 const getJsonDictObject = jsonFileName => {
     let fileContent = exports.readJsFileContent(jsonFileName);
@@ -382,7 +375,7 @@ const walkSync = function (dir, filelist) {
     }
     let files = walkSync(dirPath, []);
     files.forEach(jsFilePath => {
-            if (jsFilePath.endsWith('MissionAdvertHeader.js')) {
+            if (jsFilePath.endsWith('.js')) {
                 let jsFileName = jsFilePath.split('/').reverse()[0];
                 let jsonFilePath = 'en.json';
                 let jsFileContent = exports.readJsFileContent(jsFilePath);
