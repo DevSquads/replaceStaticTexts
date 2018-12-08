@@ -41,7 +41,7 @@ describe('Extract And Replace Script', () => {
         });
 
         before(() => {
-            if(!fs.existsSync('output')) {
+            if (!fs.existsSync('output')) {
                 fs.mkdirSync('output');
             }
         });
@@ -497,7 +497,7 @@ describe('Extract And Replace Script', () => {
                 'class TestClass extends React.Component {\n' +
                 '  render() {\n' +
                 '   this.MODAL_CONTENT = {\n' +
-                '       title: "Friendly Shapa reminder"\n'+
+                '       title: "Friendly Shapa reminder"\n' +
                 '  }\n' +
                 ' }\n' +
                 '}';
@@ -505,7 +505,7 @@ describe('Extract And Replace Script', () => {
                 'class TestClass extends React.Component {\n' +
                 '  render() {\n' +
                 '    this.MODAL_CONTENT = {\n' +
-                '      title: I18n.t("TestScreen.ObjectProperty.index(0)")\n'+
+                '      title: I18n.t("TestScreen.ObjectProperty.index(0)")\n' +
                 '    };\n' +
                 '  }\n\n' +
                 '}';
@@ -526,7 +526,7 @@ describe('Extract And Replace Script', () => {
                 '  button: {\n' +
                 '    justifyContent: "center"\n' +
                 '  }\n' +
-                '});\n\n'+
+                '});\n\n' +
                 'class TestClass extends React.Component {\n' +
                 '  render() {}\n\n' +
                 '}';
@@ -584,7 +584,7 @@ describe('Extract And Replace Script', () => {
 
         it('should ignore text in dimensions function call ', () => {
             let fileContentWithDimensionFunction = 'import React from "react";\n' +
-                'const width = Dimensions.get("window");\n\n'+
+                'const width = Dimensions.get("window");\n\n' +
                 `class TestClass extends React.Component {\n` +
                 `  render() {\n` +
                 `    return <View></View>;\n` +
@@ -604,24 +604,39 @@ describe('Extract And Replace Script', () => {
         });
 
         it('should ignore text in emoji function call ', () => {
-            let fileContentWithDimensionFunction = 'import React from "react";\n' +
-                'const smileyEmoji = emoji.get("smiley");\n\n'+
+            fs.writeFileSync('TestScreen.js');
+
+            fs.writeFileSync(jsonTestFileName, '{}');
+            let fileContentWithIgnoredCases = 'import React from "react";\n' +
+                'const ignoredCase1 = StyleSheet.get("smiley");\n' +
+                'const ignoredCase2 = Dimensions.get("smiley");\n' +
+                'const ignoredCase3 = emoji.get("smiley");\n' +
+                'const ignoredCase4 = object.setDrawerEnabled("smiley");\n' +
+                'const ignoredCase5 = OS.get("smiley");\n' +
+                'const ignoredCase6 = moment.get("smiley");\n' +
+                'const ignoredCase7 = utcMoment.get("smiley");\n' +
+                'const ignoredCase8 = OS.handleChangedInput("string");\n'+
+                'const ignoredCase9 = OS.addEventListener("string");\n' +
+                'const ignoredCase10 = OS.removeEventListener("string");\n' +
+                'const ignoredCase11 = OS.PropTypes("string");\n\n' +
+                'const aComponent = () => {\n' +
+                '  <View style={{\n' +
+                '    color: "white"\n' +
+                '  }}></View>;\n' +
+                '};\n\n' +
                 `class TestClass extends React.Component {\n` +
                 `  render() {\n` +
-                `    return <View></View>;\n` +
+                '    return <View></View>;\n' +
                 `  }\n\n` +
                 `}`;
 
-            fs.writeFileSync('TestScreen.js', fileContentWithDimensionFunction);
-            fs.writeFileSync(jsonTestFileName, '{}');
-
             parser.replaceStringsWithKeys(
-                fileContentWithDimensionFunction,
+                fileContentWithIgnoredCases,
                 'TestScreen.js',
                 jsonTestFileName
             );
 
-            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(fileContentWithDimensionFunction);
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(fileContentWithIgnoredCases);
         });
 
         it('should replace text in object declaration in side variable declaration ', () => {
@@ -629,7 +644,7 @@ describe('Extract And Replace Script', () => {
                 'const darkGrayCopyOptions = [{\n' +
                 '  A: "Small steps can get a revolution started!",\n' +
                 '  B: "Starting with your mission today:"\n' +
-                '}];\n\n'+
+                '}];\n\n' +
                 `class TestClass extends React.Component {\n` +
                 `  render() {\n` +
                 `    return <View></View>;\n` +
@@ -639,7 +654,7 @@ describe('Extract And Replace Script', () => {
                 'const darkGrayCopyOptions = [{\n' +
                 '  A: I18n.t("TestScreen.ObjectProperty.index(0)"),\n' +
                 '  B: I18n.t("TestScreen.ObjectProperty.index(1)")\n' +
-                '}];\n\n'+
+                '}];\n\n' +
                 `class TestClass extends React.Component {\n` +
                 `  render() {\n` +
                 `    return <View></View>;\n` +

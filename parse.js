@@ -104,6 +104,7 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName) => {
     writeToFile(jsFileName, newFileContent);
     return newFileContent.code;
 };
+
 exports.writeToJsonFile = (jsonFileName, jsFileName, extractedStrings) => {
     let extractedStringsWithKeyAndPath = [];
     let jsonFileContent = getJsonDictObject(jsonFileName);
@@ -146,7 +147,16 @@ const shouldBeIgnored = path => {
     return path.node.name === 'require' ||
         path.node.name === 'StyleSheet' ||
         path.node.name === 'Dimensions' ||
-        path.node.name === 'emoji';
+        path.node.name === 'emoji' ||
+        path.node.name === 'setDrawerEnabled' ||
+        path.node.name === 'OS' ||
+        path.node.name === 'moment'||
+        path.node.name === 'utcMoment'||
+        path.node.name ==='handleChangedInput' ||
+        path.node.name === 'addEventListener' ||
+        path.node.name === 'removeEventListener'||
+        path.node.name === 'PropTypes' ||
+        path.node.name === 'style';
 };
 
 const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
@@ -221,16 +231,16 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
             }
         },
         AssignmentExpression(path) {
-            let notAStyleSheet = true;
+            let shouldNotIgnorePath = true;
             path.traverse({
                 Identifier(path) {
-                    if (path.node.name === 'StyleSheet') {
-                        notAStyleSheet = false;
+                    if (shouldBeIgnored(path)) {
+                        shouldNotIgnorePath = false;
                         return;
                     }
                 }
             });
-            if (notAStyleSheet) {
+            if (shouldNotIgnorePath) {
                 path.traverse({
                     ObjectProperty(path) {
                         path.traverse({
@@ -247,22 +257,30 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
             }
         },
         VariableDeclaration(path) {
-            let notAStyleSheet = true;
+            let shouldNotBeIgnored = true;
             path.traverse({
                 Identifier(path) {
-                    if (path.node.name === 'StyleSheet') {
-                        notAStyleSheet = false;
+                    if (shouldBeIgnored(path)) {
+                        shouldNotBeIgnored = false;
+                        return;
+                    }
+                }  ,
+                JSXIdentifier(path){
+                    if (shouldBeIgnored(path)) {
+                        shouldNotBeIgnored = false;
                         return;
                     }
                 }
             });
-            if (notAStyleSheet) {
+            if (shouldNotBeIgnored) {
                 path.traverse({
                     ObjectProperty(path) {
                         path.traverse({
                             StringLiteral(path) {
                                 if (!isVisited(visitedNodePaths, path)) {
-                                    opts.objectPropertyNodeProcessor(path, opts.processedObject);
+                                    if(exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
+                                        opts.objectPropertyNodeProcessor(path, opts.processedObject);
+                                    }
                                 }
                             }
                         })
@@ -274,6 +292,12 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
             let shouldNotBeIgnored = true;
             path.traverse({
                 Identifier(path) {
+                    if (shouldBeIgnored(path)) {
+                        shouldNotBeIgnored = false;
+                        return;
+                    }
+                },
+                JSXIdentifier(path){
                     if (shouldBeIgnored(path)) {
                         shouldNotBeIgnored = false;
                         return;
@@ -375,7 +399,7 @@ const walkSync = (dir, filelist) => {
     let files = walkSync(dirPath, []);
     files.forEach(jsFilePath => {
             if (jsFilePath.endsWith('.js')) {
-                let jsFileName = jsFilePath.split('/').reverse()[0];
+                let jsFileName = jsFilePath.split('/').reverse()[1] + '_' + jsFilePath.split('/').reverse()[0];
                 let jsonFilePath = 'en.json';
                 let jsFileContent = exports.readJsFileContent(jsFilePath);
                 console.log(jsFileName);
