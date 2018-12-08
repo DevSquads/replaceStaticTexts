@@ -626,7 +626,7 @@ describe('Extract And Replace Script', () => {
                 '};\n\n' +
                 `class TestClass extends React.Component {\n` +
                 `  render() {\n` +
-                '    return <View></View>;\n' +
+                '    return <View>{config.someCondition === "text" && <Text></Text>}</View>;\n' +
                 `  }\n\n` +
                 `}`;
 

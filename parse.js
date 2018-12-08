@@ -144,19 +144,30 @@ const isVisited = (visitedNodePaths, path) => {
 };
 
 const shouldBeIgnored = path => {
-    return path.node.name === 'require' ||
-        path.node.name === 'StyleSheet' ||
-        path.node.name === 'Dimensions' ||
-        path.node.name === 'emoji' ||
-        path.node.name === 'setDrawerEnabled' ||
-        path.node.name === 'OS' ||
-        path.node.name === 'moment'||
-        path.node.name === 'utcMoment'||
-        path.node.name ==='handleChangedInput' ||
-        path.node.name === 'addEventListener' ||
-        path.node.name === 'removeEventListener'||
-        path.node.name === 'PropTypes' ||
-        path.node.name === 'style';
+    let ignoredPaths = ['StyleSheet',
+        'Dimensions',
+        'emoji',
+        'setDrawerEnabled',
+        'OS',
+        'moment',
+        'utcMoment',
+        'handleChangedInput',
+        'addEventListener',
+        'removeEventListener',
+        'PropTypes',
+        'style',
+        'margin',
+        'position',
+        'display',
+        'color',
+        'orderBy',
+        'format',
+        'editingMode',
+        'config',
+        'loading',
+        'require'
+    ];
+    return ignoredPaths.includes(path.node.name);
 };
 
 const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
@@ -168,18 +179,29 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
             }
         },
         JSXExpressionContainer(path) {
+            let shouldNotBeIgnored = true;
             path.traverse({
-                StringLiteral(path) {
-                    let nodePath = getNodePath(path);
-                    if (!nodePath.includes('attribute')) {
-                        if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                            if (!isVisited(visitedNodePaths, path)) {
-                                opts.jsxExpressionContainerNodeProcessor(path, opts.processedObject);
+                Identifier(path) {
+                    if (shouldBeIgnored(path)) {
+                        shouldNotBeIgnored = false;
+                        return;
+                    }
+                }
+            });
+            if (shouldNotBeIgnored) {
+                path.traverse({
+                    StringLiteral(path) {
+                        let nodePath = getNodePath(path);
+                        if (!nodePath.includes('attribute')) {
+                            if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
+                                if (!isVisited(visitedNodePaths, path)) {
+                                    opts.jsxExpressionContainerNodeProcessor(path, opts.processedObject);
+                                }
                             }
                         }
                     }
-                }
-            })
+                })
+            }
         },
         JSXOpeningElement(path) {
             path.traverse({
@@ -210,6 +232,12 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
             let notARequireStatement = true;
             path.traverse({
                 Identifier(path) {
+                    if (shouldBeIgnored(path)) {
+                        notARequireStatement = false;
+                        return;
+                    }
+                },
+                JSXIdentifier(path) {
                     if (shouldBeIgnored(path)) {
                         notARequireStatement = false;
                         return;
@@ -264,8 +292,8 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                         shouldNotBeIgnored = false;
                         return;
                     }
-                }  ,
-                JSXIdentifier(path){
+                },
+                JSXIdentifier(path) {
                     if (shouldBeIgnored(path)) {
                         shouldNotBeIgnored = false;
                         return;
@@ -278,7 +306,7 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                         path.traverse({
                             StringLiteral(path) {
                                 if (!isVisited(visitedNodePaths, path)) {
-                                    if(exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
+                                    if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
                                         opts.objectPropertyNodeProcessor(path, opts.processedObject);
                                     }
                                 }
@@ -297,7 +325,7 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                         return;
                     }
                 },
-                JSXIdentifier(path){
+                JSXIdentifier(path) {
                     if (shouldBeIgnored(path)) {
                         shouldNotBeIgnored = false;
                         return;
@@ -391,7 +419,7 @@ const walkSync = (dir, filelist) => {
 };
 
 (function main() {
-    ///Users/omar/WebstormProjects/parser-test/output/MissionAdvertHeader.js
+    //validatedInput_ValidatedInput
     let dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src/components';
     if (!fs.existsSync('output')) {
         fs.mkdirSync('output');
@@ -407,4 +435,4 @@ const walkSync = (dir, filelist) => {
             }
         }
     );
-});
+})();
