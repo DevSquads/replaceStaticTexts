@@ -494,7 +494,7 @@ describe('Extract And Replace Script', () => {
             let expectedFileContent = 'import I18n from "../services/internationalizations/i18n";\n' +
                 `import React from "react";\n\n` +
                 `class TestClass extends React.Component {\n` +
-                `  someObject = someCondition ? [{I18n.t("TestScreen.ConditionalExpression.index(0)")}] : [{I18n.t("TestScreen.ConditionalExpression.index(1)")}];\n\n` +
+                `  someObject = someCondition ? [I18n.t("TestScreen.ConditionalExpression.index(0)")] : [I18n.t("TestScreen.ConditionalExpression.index(1)")];\n\n` +
                 `  render() {\n` +
                 `    return <View></View>;\n` +
                 `  }\n\n` +
@@ -712,6 +712,40 @@ describe('Extract And Replace Script', () => {
             );
 
             expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedfileContentWithVariableDeclaration);
+        });
+
+        it('should put an evaluation curly bracket on an attributes value if it is inside a greater expression', () => {
+            let originalFileContentWithATitleProp = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `    <View>\n` +
+                `     {anotherCondition && <Text style={"center"} title="TEST_TITLE">{"Hello, world!"}</Text> }\n` +
+                `      {120}\n` +
+                `    </View>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+
+            let expectedFileContent = `import I18n from "../services/internationalizations/i18n";\n` +
+                `import React from "react";\n\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return <View>\n` +
+                `     {anotherCondition && <Text style={"center"} title={I18n.t("TestScreen.JSXAttribute.index(0)")}>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>}\n` +
+                `      {120}\n` +
+                `    </View>;\n` +
+                `  }\n\n` +
+                `}`
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            let actualFileContent = parser.replaceStringsWithKeys(
+                originalFileContentWithATitleProp,
+                'TestScreen.js',
+                'test.json'
+            );
+
+            expect(actualFileContent).to.eql(expectedFileContent);
         });
     })
 });
