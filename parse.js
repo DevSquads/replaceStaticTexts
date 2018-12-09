@@ -12,7 +12,8 @@ const OBJECT_PROPERTY_TYPE = 'ObjectProperty';
 const CALL_EXPRESSION_TYPE = 'CallExpression';
 
 exports.writeImportStatementToJsFile = (jsFilePath, fileContent) => {
-    let i18nPath = jsFilePath.substring(0, jsFilePath.indexOf('src') + 3) + '/services/internationalizations/i18n';
+    let jsFileDirDepth = jsFilePath.substring(jsFilePath.indexOf('src') + 4).split('/').length - 1;
+    let i18nPath = '../'.repeat(jsFileDirDepth) + 'services/internationalizations/i18n';
     fileContent = `import I18n from "${i18nPath}";\n` + fileContent;
     return fileContent;
 };
@@ -56,7 +57,7 @@ exports.extractStrings = jsFileContent => {
     return traverseAndProcessAbstractSyntaxTree(jsFileContent, nodeProcessors);
 };
 
-exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFilePath = '') => {
+exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFilePath = `output/${jsFileName}`) => {
     let extractedStrings = exports.extractStrings(fileContent);
     if (extractedStrings.length) {
         fileContent = exports.writeImportStatementToJsFile(jsFilePath, fileContent);
@@ -110,7 +111,7 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFileP
     traverseAndProcessAbstractSyntaxTree(fileContent, nodeProcessors);
 
     let newFileContent = babelGenerator.default(parsedTree, {sourceMap: true}, fileContent);
-    writeToFile(jsFileName, newFileContent);
+    writeToFile(jsFilePath, newFileContent);
     return newFileContent.code;
 };
 
@@ -144,7 +145,7 @@ exports.cleanUpExtractedString = extractedString => {
 };
 
 const writeToFile = (jsFileName, newFileContent) => {
-    fs.writeFileSync('output/' + jsFileName, newFileContent.code);
+    fs.writeFileSync(jsFileName, newFileContent.code);
 };
 
 const isVisited = (visitedNodePaths, path) => {
