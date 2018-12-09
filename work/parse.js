@@ -80,11 +80,10 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFileP
                 extractedStringsWithKeyAndPath.shift();
             }
         },
-        jsxTitleAttributeNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            if(path.parentKey === 'expression') {
+        jsxTitleAttributeNodeProcessor(path, extractedStringsWithKeyAndPath, isAnExpression) {
+            if (isAnExpression) {
                 path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-            }
-            else {
+            } else {
                 path.node.extra.raw = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
             }
             extractedStringsWithKeyAndPath.shift();
@@ -103,8 +102,12 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFileP
             extractedStringsWithKeyAndPath.shift();
         }
         ,
-        callExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            path.node.value = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
+        callExpressionNodeProcessor(path, extractedStringsWithKeyAndPath, isAnExpression) {
+            if (isAnExpression) {
+                path.node.value = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
+            } else {
+                path.node.value = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
+            }
             extractedStringsWithKeyAndPath.shift();
         }
     };
@@ -189,7 +192,8 @@ const shouldBeIgnored = path => {
         'outerRingColor',
         'outputRange',
         'playSound',
-        'fontColor'
+        'fontColor',
+        'disableButtons'
     ];
     return ignoredPaths.includes(path.node.name);
 };
@@ -237,12 +241,19 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
         JSXOpeningElement(path) {
             path.traverse({
                 JSXAttribute(path) {
+                    let isAnExpression = false;
+                    path.traverse({
+                        JSXExpressionContainer(path) {
+                            isAnExpression = true;
+                            return;
+                        }
+                    });
                     if (path.node.name.name === 'title') {
                         path.traverse({
                             StringLiteral(path) {
                                 if (!isVisited(visitedNodePaths, path)) {
                                     if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                                        opts.jsxTitleAttributeNodeProcessor(path, opts.processedObject);
+                                        opts.jsxTitleAttributeNodeProcessor(path, opts.processedObject, isAnExpression);
                                     }
                                 }
                             },
@@ -261,18 +272,31 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
         },
         ConditionalExpression(path) {
             let shouldNotBeIgnored = true;
+            let isAnExpression = false;
             path.traverse({
                 Identifier(path) {
                     if (shouldBeIgnored(path)) {
                         shouldNotBeIgnored = false;
                         return;
                     }
+                    path.traverse({
+                        JSXExpressionContainer(path) {
+                            isAnExpression = true;
+                            return;
+                        }
+                    });
                 },
                 JSXIdentifier(path) {
                     if (shouldBeIgnored(path)) {
                         shouldNotBeIgnored = false;
                         return;
                     }
+                    path.traverse({
+                        JSXExpressionContainer(path) {
+                            isAnExpression = true;
+                            return;
+                        }
+                    });
                 }
             });
             if (shouldNotBeIgnored) {
@@ -281,7 +305,7 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                         if (!isVisited(visitedNodePaths, path)) {
                             if (path.getPathLocation().includes('alternate') || path.getPathLocation().includes('consequent')) {
                                 if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                                    opts.conditionalExpressionNodeProcessor(path, opts.processedObject);
+                                    opts.conditionalExpressionNodeProcessor(path, opts.processedObject, isAnExpression);
                                 }
                             }
                         }
@@ -289,7 +313,7 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                     TemplateElement(path) {
                         if (!isVisited(visitedNodePaths, path)) {
                             if (exports.cleanUpExtractedString(path.node.value.raw).length !== 0) {
-                                opts.templateElementNodeProcessor(path, opts.processedObject);
+                                opts.templateElementNodeProcessor(path, opts.processedObject, isAnExpression);
                             }
                         }
                     }
@@ -466,7 +490,7 @@ const constructStringObject = (textKey, extractedText, stringType) => {
     return {
         path: textKey.replace('.value', ''),
         type: stringType,
-        value: extractedText
+        value: extractedText.trim()
     };
 };
 
@@ -485,15 +509,15 @@ const walkSync = (dir, filelist) => {
 
 (function main() {
     //validatedInput_ValidatedInput
-    let dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src/components';
+    let dirPath = './work/';
     if (!fs.existsSync('output')) {
         fs.mkdirSync('output');
     }
     let files = walkSync(dirPath, []);
     files.forEach(jsFilePath => {
-            if (jsFilePath.endsWith('.js') && !jsFilePath.endsWith('LanguageSetting.js') && !jsFilePath.toUpperCase().includes('DEPRECATED')) {
-                let jsFileName = jsFilePath.split('/').reverse()[1] + '_' + jsFilePath.split('/').reverse()[0];
-                let jsonFilePath = 'en.json';
+            if (jsFilePath.endsWith('constants.js') && !jsFilePath.endsWith('LanguageSetting.js') && !jsFilePath.toUpperCase().includes('DEPRECATED')) {
+                let jsFileName = jsFilePath.split('/').reverse()[0];
+                let jsonFilePath = './work/en.json';
                 let jsFileContent = exports.readJsFileContent(jsFilePath);
                 console.log(jsFileName);
                 exports.replaceStringsWithKeys(jsFileContent, jsFileName, jsonFilePath, jsFilePath);
@@ -501,3 +525,12 @@ const walkSync = (dir, filelist) => {
         }
     );
 });
+(function cleanUpJsonFile(){
+    let jsonFilePath = './work/en.json';
+    let jsonFileContent = fs.readFileSync(jsonFilePath);
+    let jsonObject =  JSON.parse(jsonFileContent);
+    for(let key in jsonObject){
+        jsonObject[key] = jsonObject[key].trim();
+    }
+    fs.writeFileSync('./work/en.json', JSON.stringify(jsonObject));
+})();

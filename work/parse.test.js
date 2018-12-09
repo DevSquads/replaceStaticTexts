@@ -747,5 +747,39 @@ describe('Extract And Replace Script', () => {
 
             expect(actualFileContent).to.eql(expectedFileContent);
         });
+
+        it('should not evaluate inside an evaluation expression', () => {
+            let originalFileContentWithATitleProp = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `    <View>\n` +
+                `     {anotherCondition && <Text style={"center"} title={someCondition ? "TEST_TITLE" : "ANOTHER_TITLE"}>{"Hello, world!"}</Text> }\n` +
+                `      {120}\n` +
+                `    </View>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+
+            let expectedFileContent = `import I18n from "../services/internationalizations/i18n";\n` +
+                `import React from "react";\n\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return <View>\n` +
+                `     {anotherCondition && <Text style={"center"} title={someCondition ? I18n.t("TestScreen.JSXAttribute.index(0)") : I18n.t("TestScreen.JSXAttribute.index(1)")}>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>}\n` +
+                `      {120}\n` +
+                `    </View>;\n` +
+                `  }\n\n` +
+                `}`
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            let actualFileContent = parser.replaceStringsWithKeys(
+                originalFileContentWithATitleProp,
+                'TestScreen.js',
+                'test.json'
+            );
+
+            expect(actualFileContent).to.eql(expectedFileContent);
+        });
     })
 });
