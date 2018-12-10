@@ -1,6 +1,7 @@
 const babelParser = require("@babel/core");
 const babelTraverse = require("@babel/traverse");
 const babelGenerator = require('@babel/generator');
+const babelTypes = require('@babel/types');
 const fs = require("fs");
 
 const JSX_TEXT_TYPE = 'JSXText';
@@ -11,11 +12,22 @@ const CONDITIONAL_EXPRESSION_TYPE = 'ConditionalExpression';
 const OBJECT_PROPERTY_TYPE = 'ObjectProperty';
 const CALL_EXPRESSION_TYPE = 'CallExpression';
 const RETURN_EXPRESSION_TYPE = 'ReturnExpression';
-exports.writeImportStatementToJsFile = (jsFilePath, fileContent) => {
+
+exports.writeImportStatementToJsFile = (parsedTree, jsFilePath) => {
     let jsFileDirDepth = jsFilePath.substring(jsFilePath.indexOf('src') + 4).split('/').length - 1;
     let i18nPath = '../'.repeat(jsFileDirDepth) + 'services/internationalizations/i18n';
-    fileContent = `import I18n from "${i18nPath}";\n` + fileContent;
-    return fileContent;
+    babelTraverse.default(parsedTree, {
+        Program(path) {
+            const lastImport = path.get("body").filter(p => p.isImportDeclaration()).pop();
+            const identifier = babelTypes.identifier('I18n');
+            const importDefaultSpecifier = babelTypes.importDefaultSpecifier(identifier);
+            const importDeclaration = babelTypes.importDeclaration([importDefaultSpecifier], babelTypes.stringLiteral(i18nPath));
+
+            if (lastImport) {
+                lastImport.insertAfter(importDeclaration);
+            }
+        }
+    });
 };
 
 exports.extractStrings = jsFileContent => {
@@ -63,11 +75,11 @@ exports.extractStrings = jsFileContent => {
 
 exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFilePath = `output/${jsFileName}`) => {
     let extractedStrings = exports.extractStrings(fileContent);
-    if (extractedStrings.length) {
-        fileContent = exports.writeImportStatementToJsFile(jsFilePath, fileContent);
-    }
     let extractedStringsWithKeyAndPath = exports.writeToJsonFile(jsonFileName, jsFileName, extractedStrings);
     let parsedTree = getParsedTree(fileContent);
+    if (extractedStrings.length) {
+        exports.writeImportStatementToJsFile(parsedTree, jsFilePath);
+    }
 
     let nodeProcessors = {
         parsedTree: parsedTree,
@@ -576,11 +588,15 @@ const getParsedTree = jsFileContent => {
     return parseTree;
 };
 
+const cleanUpIndentation = extractedText => {
+    return extractedText.replace(/^\n[\t ]{2,}/gm, '').replace(/\n[\t ]{2,}$/gm, '').replace(/\n[\t ]{2,}/gm, '\n');
+}
+
 const constructStringObject = (textKey, extractedText, stringType) => {
     return {
         path: textKey.replace('.value', ''),
         type: stringType,
-        value: extractedText.replace(/^\n[\t ]{2,}/gm, '').replace(/\n[\t ]{2,}$/gm, '').replace(/\n[\t ]{2,}/gm, '\n')
+        value: cleanUpIndentation(extractedText)
     };
 };
 
@@ -615,4 +631,4 @@ const walkSync = (dir, filelist) => {
             }
         }
     );
-})();
+});
