@@ -189,7 +189,25 @@ const shouldBeIgnored = path => {
         'outputRange',
         'playSound',
         'fontColor',
-        'disableButtons'
+        'disableButtons',
+        'inchesIsFocused',
+        'onFormFocus',
+        'onFormBlur',
+        'flexDirection',
+        'logInWithReadPermissions',
+        'mediaType',
+        'layoutType',
+        'set',
+        'get',
+        'add',
+        'pick',
+        'alignSelf',
+        'justifyContent',
+        'alignItems',
+        'generateChoiceSelection',
+        'generateTimeSelection',
+        'localMoment',
+
     ];
     return ignoredPaths.includes(path.node.name);
 };
@@ -249,7 +267,9 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                         path.node.name.name === 'placeholder' ||
                         path.node.name.name === 'errMessage' ||
                         path.node.name.name === 'tip' ||
-                        path.node.name.name === 'buttonText') {
+                        path.node.name.name === 'buttonText' ||
+                        path.node.name.name === 'confirmBtnText' ||
+                        path.node.name.name === 'cancelBtnText') {
                         path.traverse({
                             StringLiteral(path) {
                                 if (!isVisited(visitedNodePaths, path)) {
@@ -274,7 +294,16 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
         ConditionalExpression(path) {
             let shouldNotBeIgnored = true;
             let isAnExpression = false;
+            let parent = path.findParent((path) => path.getPathLocation());
+            if(parent.node.id != null  && (
+                parent.node.id.name === 'flexDirection' ||
+                parent.node.id.name ==='layoutType' ||
+                parent.node.id.name === 'keyboardType' ||
+                parent.node.id.name === 'fontColor')){
+                shouldNotBeIgnored=false;
+            }
             path.traverse({
+
                 Identifier(path) {
                     if (shouldBeIgnored(path)) {
                         shouldNotBeIgnored = false;
@@ -526,13 +555,4 @@ const walkSync = (dir, filelist) => {
             }
         }
     );
-});
-(function cleanUpJsonFile(){
-    let jsonFilePath = './work/en.json';
-    let jsonFileContent = fs.readFileSync(jsonFilePath);
-    let jsonObject =  JSON.parse(jsonFileContent);
-    for(let key in jsonObject){
-        jsonObject[key] = jsonObject[key].trim();
-    }
-    fs.writeFileSync('./work/en.json', JSON.stringify(jsonObject));
 });

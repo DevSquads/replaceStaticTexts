@@ -52,7 +52,7 @@ describe('Extract And Replace Script', () => {
                 fs.unlinkSync('output/' + files[i]);
             }
             fs.rmdirSync('output');
-            if(fs.existsSync('TestScreen.js')) {
+            if (fs.existsSync('TestScreen.js')) {
                 fs.unlinkSync('TestScreen.js');
             }
         });
@@ -406,15 +406,15 @@ describe('Extract And Replace Script', () => {
             let extractedStrings = parser.extractStrings(originalFileContentWithAPlaceholderProp);
 
             expect(extractedStrings).to.deep.contain({
-                "path": "program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression",
-                "type": "JSXAttribute",
-                "value": "TEST_PLACEHOLDER"
-            },
+                    "path": "program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression",
+                    "type": "JSXAttribute",
+                    "value": "TEST_PLACEHOLDER"
+                },
                 {
                     "path": "program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression",
                     "type": "JSXAttribute",
                     "value": "TEST_tip"
-                },{
+                }, {
                     "path": "program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression",
                     "type": "JSXAttribute",
                     "value": "TEST_errormessage"
@@ -767,6 +767,28 @@ describe('Extract And Replace Script', () => {
             expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(fileContentWithIgnoredCases);
         });
 
+        it('should ignore text in flexDirection style call ', () => {
+            fs.writeFileSync('TestScreen.js');
+
+            fs.writeFileSync(jsonTestFileName, '{}');
+            let fileContentWithIgnoredCases = 'import React from "react";\n' +
+                '<View style={{\n' +
+                '  color: "white"\n' +
+                '}}></View>;\n\n' +
+                'class TestClass extends React.Component {\n' +
+                '  render() {\n' +
+                '    const flexDirection = mission.status === "RECOMMENDED" || mission.status === "SKIPPED" ? "text1" : "text2";\n' +
+                '  }\n\n' +
+                '}';
+
+            parser.replaceStringsWithKeys(
+                fileContentWithIgnoredCases,
+                'TestScreen.js',
+                jsonTestFileName
+            );
+
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(fileContentWithIgnoredCases);
+        });
         it('should replace text in object declaration in side variable declaration ', () => {
             let originalfileContentWithVariableDeclaration = 'import React from "react";\n' +
                 'const darkGrayCopyOptions = [{\n' +
