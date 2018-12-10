@@ -781,5 +781,29 @@ describe('Extract And Replace Script', () => {
 
             expect(actualFileContent).to.eql(expectedFileContent);
         });
+
+        it('should retrieve text without indentation', () => {
+            let originalFileContentWithATitleProp = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `    <View>\n` +
+                `      <Text>\n` +
+                `           Hello, world!\n` +
+                `      </Text>\n` +
+                `    </View>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            let extractedStrings = parser.extractStrings(originalFileContentWithATitleProp);
+
+            expect(extractedStrings).to.deep.contain({
+                "path": "program.body.1.body.body.0.body.body.0.argument.children.1.children.0",
+                "type": "JSXText",
+                "value": "Hello, world!"
+            });
+        });
     })
 });

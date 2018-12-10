@@ -69,16 +69,12 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFileP
         parsedTree: parsedTree,
         processedObject: extractedStringsWithKeyAndPath,
         jsxTextNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            if (extractedStringsWithKeyAndPath[0].value === path.node.value) {
                 path.node.value = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
                 extractedStringsWithKeyAndPath.shift();
-            }
         },
         jsxExpressionContainerNodeProcessor(path, extractedStringsWithKeyAndPath) {
-            if (extractedStringsWithKeyAndPath[0].value === path.node.value) {
                 path.node.extra.raw = `I18n.t(\"${extractedStringsWithKeyAndPath[0].key}\")`;
                 extractedStringsWithKeyAndPath.shift();
-            }
         },
         jsxTitleAttributeNodeProcessor(path, extractedStringsWithKeyAndPath, isAnExpression) {
             if (isAnExpression) {
@@ -490,7 +486,7 @@ const constructStringObject = (textKey, extractedText, stringType) => {
     return {
         path: textKey.replace('.value', ''),
         type: stringType,
-        value: extractedText.trim()
+        value: extractedText.replace(/^\n[\t ]{2,}/gm, '').replace(/\n[\t ]{2,}$/gm, '').replace(/\n[\t ]{2,}/gm, '\n')
     };
 };
 
@@ -533,4 +529,4 @@ const walkSync = (dir, filelist) => {
         jsonObject[key] = jsonObject[key].trim();
     }
     fs.writeFileSync('./work/en.json', JSON.stringify(jsonObject));
-})();
+});
