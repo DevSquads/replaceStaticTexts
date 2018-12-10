@@ -823,7 +823,38 @@ describe('Extract And Replace Script', () => {
 
             expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedfileContentWithVariableDeclaration);
         });
+        //const firstCalibrationPhrases = ["Connecting your Shapa to your phone", "Measuring your weight", "Loading your stats to the server"];
+        it('should replace text in array declaration in side variable declaration ', () => {
+            let originalfileContentWithVariableDeclaration = 'import React from "react";\n' +
+                'const firstCalibrationPhrases = ["Connecting your Shapa to your phone", "Measuring your weight"];\n\n' +
+                'class TestClass extends React.Component {\n'+
+                '  render() {\n' +
+                '   return <View></View>;\n' +
+                '  }\n\n' +
+                '}';
+            let expectedfileContentWithVariableDeclaration = 'import I18n from "../services/internationalizations/i18n";\n' +
+                'import React from "react";\n' +
+                'const firstCalibrationPhrases = ['+
+                'I18n.t("TestScreen.ObjectProperty.index(0)"),' +
+                ' I18n.t("TestScreen.ObjectProperty.index(1)")' +
+                '];\n\n' +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return <View></View>;\n` +
+                `  }\n\n` +
+                `}`;
 
+            fs.writeFileSync('TestScreen.js', originalfileContentWithVariableDeclaration);
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            parser.replaceStringsWithKeys(
+                originalfileContentWithVariableDeclaration,
+                'TestScreen.js',
+                jsonTestFileName
+            );
+
+            expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedfileContentWithVariableDeclaration);
+        });
         it('should put an evaluation curly bracket on an attributes value if it is inside a greater expression', () => {
             let originalFileContentWithATitleProp = `import React from "react";\n` +
                 `class TestClass extends React.Component {\n` +

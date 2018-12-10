@@ -293,7 +293,11 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                         path.node.name.name === 'tip' ||
                         path.node.name.name === 'buttonText' ||
                         path.node.name.name === 'confirmBtnText' ||
-                        path.node.name.name === 'cancelBtnText') {
+                        path.node.name.name === 'cancelBtnText' ||
+                        path.node.name.name === 'sectionTitle' ||
+                        path.node.name.name === 'sectionText' ||
+                        path.node.name.name === 'info') {
+
                         path.traverse({
                             StringLiteral(path) {
                                 if (!isVisited(visitedNodePaths, path)) {
@@ -432,6 +436,24 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
             if (shouldNotBeIgnored) {
                 path.traverse({
                     ObjectProperty(path) {
+                        path.traverse({
+                            StringLiteral(path) {
+                                if (!isVisited(visitedNodePaths, path)) {
+                                    if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
+                                        opts.objectPropertyNodeProcessor(path, opts.processedObject);
+                                    }
+                                }
+                            },
+                            TemplateElement(path) {
+                                if (!isVisited(visitedNodePaths, path)) {
+                                    if (exports.cleanUpExtractedString(path.node.value.raw).length !== 0) {
+                                        opts.templateElementNodeProcessor(path, opts.processedObject);
+                                    }
+                                }
+                            }
+                        })
+                    },
+                    ArrayExpression(path) {
                         path.traverse({
                             StringLiteral(path) {
                                 if (!isVisited(visitedNodePaths, path)) {
