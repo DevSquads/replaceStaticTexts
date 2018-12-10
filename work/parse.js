@@ -244,7 +244,12 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                             return;
                         }
                     });
-                    if (path.node.name.name === 'title') {
+                    if (path.node.name.name === 'title' ||
+                        path.node.name.name === 'content' ||
+                        path.node.name.name === 'placeholder' ||
+                        path.node.name.name === 'errMessage' ||
+                        path.node.name.name === 'tip' ||
+                        path.node.name.name === 'buttonText') {
                         path.traverse({
                             StringLiteral(path) {
                                 if (!isVisited(visitedNodePaths, path)) {
@@ -505,13 +510,14 @@ const walkSync = (dir, filelist) => {
 
 (function main() {
     //validatedInput_ValidatedInput
-    let dirPath = './work/';
+    ///Users/xamohsen/devsquads/shapa-react-native/src/components/buttons/AddPhotoButton.js
+    let dirPath = '/Users/xamohsen/devsquads/shapa-react-native/src/components/';
     if (!fs.existsSync('output')) {
         fs.mkdirSync('output');
     }
     let files = walkSync(dirPath, []);
     files.forEach(jsFilePath => {
-            if (jsFilePath.endsWith('constants.js') && !jsFilePath.endsWith('LanguageSetting.js') && !jsFilePath.toUpperCase().includes('DEPRECATED')) {
+            if (jsFilePath.endsWith('.js') && !jsFilePath.endsWith('LanguageSetting.js') && !jsFilePath.toUpperCase().includes('DEPRECATED')) {
                 let jsFileName = jsFilePath.split('/').reverse()[0];
                 let jsonFilePath = './work/en.json';
                 let jsFileContent = exports.readJsFileContent(jsFilePath);

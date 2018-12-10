@@ -334,6 +334,94 @@ describe('Extract And Replace Script', () => {
             });
         });
 
+        it('should retrieve texts inside errMessage prop', () => {
+            let originalFileContentWithAerrMessageProp = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `    <View>\n` +
+                `   {someCondition && console.log('test')}` +
+                `      <Text style={"center"} errMessage={"TEST_errMessage"}>{"Hello, world!"}</Text>\n` +
+                `      <View><Text>{"Another Text"}</Text></View>\n` +
+                `      {120}\n` +
+                `    </View>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            let extractedStrings = parser.extractStrings(originalFileContentWithAerrMessageProp);
+
+            expect(extractedStrings).to.deep.contain({
+                "path": "program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression",
+                "type": "JSXAttribute",
+                "value": "TEST_errMessage"
+            });
+        });
+
+        it('should retrieve texts inside content prop', () => {
+            let originalFileContentWithAContentProp = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `    <View>\n` +
+                `   {someCondition && console.log('test')}` +
+                `      <Text style={"center"} content={"TEST_TITLE"}>{"Hello, world!"}</Text>\n` +
+                `      <View><Text>{"Another Text"}</Text></View>\n` +
+                `      {120}\n` +
+                `    </View>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            let extractedStrings = parser.extractStrings(originalFileContentWithAContentProp);
+
+            expect(extractedStrings).to.deep.contain({
+                "path": "program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression",
+                "type": "JSXAttribute",
+                "value": "TEST_TITLE"
+            });
+        });
+
+        it('should retrieve texts inside placeholder/tip/erromessage prop', () => {
+            let originalFileContentWithAPlaceholderProp = `import React from "react";\n` +
+                `class TestClass extends React.Component {\n` +
+                `  render() {\n` +
+                `    return (\n` +
+                `    <View>\n` +
+                `   {someCondition && console.log('test')}` +
+                `      <Text style={"center"} placeholder={"TEST_PLACEHOLDER"}>{"Hello, world!"}</Text>\n` +
+                `      <Text style={"center"} tip={"TEST_tip"}>{"Hello, world!"}</Text>\n` +
+                `      <Text style={"center"} errormessage={"TEST_errormessage"}>{"Hello, world!"}</Text>\n` +
+
+                `      <View><Text>{"Another Text"}</Text></View>\n` +
+                `      {120}\n` +
+                `    </View>\n` +
+                `    );\n` +
+                `  }\n` +
+                `}`;
+            fs.writeFileSync(jsonTestFileName, '{}');
+
+            let extractedStrings = parser.extractStrings(originalFileContentWithAPlaceholderProp);
+
+            expect(extractedStrings).to.deep.contain({
+                "path": "program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression",
+                "type": "JSXAttribute",
+                "value": "TEST_PLACEHOLDER"
+            },
+                {
+                    "path": "program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression",
+                    "type": "JSXAttribute",
+                    "value": "TEST_tip"
+                },{
+                    "path": "program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression",
+                    "type": "JSXAttribute",
+                    "value": "TEST_errormessage"
+                });
+        });
+
+
         it('should replace texts inside title prop with an expression', () => {
             let originalFileContentWithATitleProp = `import React from "react";\n` +
                 `class TestClass extends React.Component {\n` +
