@@ -892,6 +892,111 @@ describe('Extract And Replace Script', () => {
             expect(actualFileContent).to.eql(expectedFileContent);
         });
 
+
+        //return `Today and tomorrow, this mission will appear on your calendar at this time:`;
+        it('should retrieve literal text in return statement', () => {
+            let originalJsWithReturnStatement = 'import React from "react";\n'+
+                'class TestClass extends React.Component {\n' +
+                '  render() {\n' +
+                '   return `Today and tomorrow, this mission will appear on your calendar at this time:`;\n' +
+                ' }\n' +
+                '}';
+            fs.writeFileSync(jsonTestFileName, '{}');
+            let expectedFileContent = 'import I18n from "../services/internationalizations/i18n";\n' +
+                'import React from "react";\n\n'+
+                'class TestClass extends React.Component {\n' +
+                '  render() {\n' +
+                '    return `${I18n.t("TestScreen.TemplateElement.index(0)")}`;\n' +
+                '  }\n\n' +
+                '}';
+            fs.writeFileSync(jsonTestFileName, '{}');
+            let extractedStrings = parser.replaceStringsWithKeys(
+                originalJsWithReturnStatement,
+                'TestScreen.js',
+                'test.json'
+            );
+
+            expect(extractedStrings).to.eql(expectedFileContent);
+        });
+
+        it('should retrieve template literal text in return statement', () => {
+            let originalJsWithReturnStatement = 'import React from "react";\n'+
+                'class TestClass extends React.Component {\n' +
+                '  render() {\n' +
+                '   return `Today and tomorrow, ${this.test}  this mission will appear on your calendar at this time:`;\n' +
+                ' }\n' +
+                '}';
+            fs.writeFileSync(jsonTestFileName, '{}');
+            let expectedFileContent = 'import I18n from "../services/internationalizations/i18n";\n' +
+                'import React from "react";\n\n'+
+                'class TestClass extends React.Component {\n' +
+                '  render() {\n' +
+                '    return `${I18n.t("TestScreen.TemplateElement.index(0)")}${this.test}${I18n.t("TestScreen.TemplateElement.index(1)")}`;\n' +
+                '  }\n\n' +
+                '}';
+            fs.writeFileSync(jsonTestFileName, '{}');
+            let extractedStrings = parser.replaceStringsWithKeys(
+                originalJsWithReturnStatement,
+                'TestScreen.js',
+                'test.json'
+            );
+
+            expect(extractedStrings).to.eql(expectedFileContent);
+        });
+
+        //return `Today and tomorrow, this mission will appear on your calendar at this time:`;
+        it('should retrieve text in return statement', () => {
+            let originalJsWithReturnStatement = 'import React from "react";\n'+
+                'class TestClass extends React.Component {\n' +
+                '  render() {\n' +
+                '   return "Today and tomorrow, this mission will appear on your calendar at this time:";\n' +
+                ' }\n' +
+                '}';
+            fs.writeFileSync(jsonTestFileName, '{}');
+            let expectedFileContent = 'import I18n from "../services/internationalizations/i18n";\n' +
+                'import React from "react";\n\n'+
+                'class TestClass extends React.Component {\n' +
+                '  render() {\n' +
+                '    return "{I18n.t(\\"TestScreen.ReturnExpression.index(0)\\")}";\n' +
+                '  }\n\n' +
+                '}';
+            fs.writeFileSync(jsonTestFileName, '{}');
+            let extractedStrings = parser.replaceStringsWithKeys(
+                originalJsWithReturnStatement,
+                'TestScreen.js',
+                'test.json'
+            );
+
+            expect(extractedStrings).to.eql(expectedFileContent);
+        });
+
+        //return `Today and tomorrow, this mission will appear on your calendar at this time:`;
+        it('should not retrieve text in return statement of calculateKeyboardType', () => {
+            let originalJsWithReturnStatement = 'import React from "react";\n'+
+                'class TestClass extends React.Component {\n' +
+                '  calculateKeyboardType() {\n' +
+                'if (keyRepresentation === "idealWeight")\n' +
+                '   return "Today and tomorrow, this mission will appear on your calendar at this time:";\n' +
+                ' }\n' +
+                '}';
+            fs.writeFileSync(jsonTestFileName, '{}');
+            let expectedFileContent =
+                'import React from "react";\n\n'+
+                'class TestClass extends React.Component {\n' +
+                '  calculateKeyboardType() {\n' +
+                '    if (keyRepresentation === "idealWeight") return "Today and tomorrow, this mission will appear on your calendar at this time:";\n'+
+                '  }\n\n' +
+                '}';
+            fs.writeFileSync(jsonTestFileName, '{}');
+            let extractedStrings = parser.replaceStringsWithKeys(
+                originalJsWithReturnStatement,
+                'TestScreen.js',
+                'test.json'
+            );
+
+            expect(extractedStrings).to.eql(expectedFileContent);
+        });
+
         it('should retrieve text without indentation', () => {
             let originalFileContentWithATitleProp = `import React from "react";\n` +
                 `class TestClass extends React.Component {\n` +

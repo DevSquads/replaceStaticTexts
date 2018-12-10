@@ -10,7 +10,7 @@ const TEMPLATE_ELEMENT = 'TemplateElement';
 const CONDITIONAL_EXPRESSION_TYPE = 'ConditionalExpression';
 const OBJECT_PROPERTY_TYPE = 'ObjectProperty';
 const CALL_EXPRESSION_TYPE = 'CallExpression';
-
+const RETURN_EXPRESSION_TYPE = 'ReturnExpression';
 exports.writeImportStatementToJsFile = (jsFilePath, fileContent) => {
     let jsFileDirDepth = jsFilePath.substring(jsFilePath.indexOf('src') + 4).split('/').length - 1;
     let i18nPath = '../'.repeat(jsFileDirDepth) + 'services/internationalizations/i18n';
@@ -51,6 +51,10 @@ exports.extractStrings = jsFileContent => {
         callExpressionNodeProcessor(path, extractedStringsWithTypeAndPath) {
             let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
             extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, CALL_EXPRESSION_TYPE));
+        },
+        returnExpressionNodeProcessor(path, extractedStringsWithTypeAndPath) {
+            let nodePath = path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
+            extractedStringsWithTypeAndPath.push(constructStringObject(nodePath, path.node.extra.rawValue, RETURN_EXPRESSION_TYPE));
         }
     };
 
@@ -69,12 +73,12 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFileP
         parsedTree: parsedTree,
         processedObject: extractedStringsWithKeyAndPath,
         jsxTextNodeProcessor(path, extractedStringsWithKeyAndPath) {
-                path.node.value = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
-                extractedStringsWithKeyAndPath.shift();
+            path.node.value = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
+            extractedStringsWithKeyAndPath.shift();
         },
         jsxExpressionContainerNodeProcessor(path, extractedStringsWithKeyAndPath) {
-                path.node.extra.raw = `I18n.t(\"${extractedStringsWithKeyAndPath[0].key}\")`;
-                extractedStringsWithKeyAndPath.shift();
+            path.node.extra.raw = `I18n.t(\"${extractedStringsWithKeyAndPath[0].key}\")`;
+            extractedStringsWithKeyAndPath.shift();
         },
         jsxTitleAttributeNodeProcessor(path, extractedStringsWithKeyAndPath, isAnExpression) {
             if (isAnExpression) {
@@ -99,6 +103,14 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFileP
         }
         ,
         callExpressionNodeProcessor(path, extractedStringsWithKeyAndPath, isAnExpression) {
+            if (isAnExpression) {
+                path.node.value = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
+            } else {
+                path.node.value = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
+            }
+            extractedStringsWithKeyAndPath.shift();
+        },
+        returnExpressionNodeProcessor(path, extractedStringsWithKeyAndPath, isAnExpression) {
             if (isAnExpression) {
                 path.node.value = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
             } else {
@@ -295,12 +307,12 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
             let shouldNotBeIgnored = true;
             let isAnExpression = false;
             let parent = path.findParent((path) => path.getPathLocation());
-            if(parent.node.id != null  && (
+            if (parent.node.id != null && (
                 parent.node.id.name === 'flexDirection' ||
-                parent.node.id.name ==='layoutType' ||
+                parent.node.id.name === 'layoutType' ||
                 parent.node.id.name === 'keyboardType' ||
-                parent.node.id.name === 'fontColor')){
-                shouldNotBeIgnored=false;
+                parent.node.id.name === 'fontColor')) {
+                shouldNotBeIgnored = false;
             }
             path.traverse({
 
@@ -464,8 +476,56 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                     }
                 })
             }
-        }
+        },
+        Function(path) {
+            //console.log(path);
+            if (path.node.key != null &&
+                (path.node.key.name === 'calculateKeyboardType' ||
+                    path.node.key.name === 'processOutgoingValue' ||
+                    path.node.key.name === 'getBackgroundColors')) {
+                return;
+            }
+            path.traverse({
+                ReturnStatement(path) {
+                    let shouldNotBeIgnored = true;
 
+                    path.traverse({
+                        Identifier(path) {
+                            if (shouldBeIgnored(path)) {
+                                shouldNotBeIgnored = false;
+                                return;
+                            }
+                        },
+                        JSXIdentifier(path) {
+                            if (shouldBeIgnored(path)) {
+                                shouldNotBeIgnored = false;
+                                return;
+                            }
+                        }
+                    });
+                    if (shouldNotBeIgnored) {
+                        path.traverse({
+                            StringLiteral(path) {
+                                if (path.getPathLocation().includes('argument') && !path.getPathLocation().includes('expression')) {
+                                    if (!isVisited(visitedNodePaths, path)) {
+                                        if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
+                                            opts.returnExpressionNodeProcessor(path, opts.processedObject);
+                                        }
+                                    }
+                                }
+                            },
+                            TemplateElement(path) {
+                                if (!isVisited(visitedNodePaths, path) && !path.getPathLocation().includes('expression')) {
+                                    if (exports.cleanUpExtractedString(path.node.value.raw).length !== 0) {
+                                        opts.templateElementNodeProcessor(path, opts.processedObject);
+                                    }
+                                }
+                            }
+                        })
+                    }
+                }
+            })
+        }
     };
 
     babelTraverse.default(opts.parsedTree, astVisitors);
@@ -555,4 +615,4 @@ const walkSync = (dir, filelist) => {
             }
         }
     );
-});
+})();
