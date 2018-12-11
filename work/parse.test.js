@@ -606,7 +606,7 @@ describe('Extract And Replace Script', () => {
                 `  }\n\n` +
                 `}`;
 
-            fs.writeFileSync('TestScreen.js', originalFileContentWithARequireStatement);
+            fs.writeFileSync('output/TestScreen.js', originalFileContentWithARequireStatement);
             fs.writeFileSync(jsonTestFileName, '{}');
 
             parser.replaceStringsWithKeys(
@@ -658,7 +658,7 @@ describe('Extract And Replace Script', () => {
                 '  render() {}\n\n' +
                 '}';
 
-            fs.writeFileSync('TestScreen.js', fileContentWithStyleValues);
+            fs.writeFileSync('output/TestScreen.js', fileContentWithStyleValues);
             fs.writeFileSync(jsonTestFileName, '{}');
 
             parser.replaceStringsWithKeys(fileContentWithStyleValues, 'TestScreen.js', jsonTestFileName);
@@ -719,7 +719,7 @@ describe('Extract And Replace Script', () => {
                 `  }\n\n` +
                 `}`;
 
-            fs.writeFileSync('TestScreen.js', fileContentWithDimensionFunction);
+            fs.writeFileSync('output/TestScreen.js', fileContentWithDimensionFunction);
             fs.writeFileSync(jsonTestFileName, '{}');
 
             parser.replaceStringsWithKeys(
@@ -732,8 +732,6 @@ describe('Extract And Replace Script', () => {
         });
 
         it('should ignore text in emoji function call ', () => {
-            fs.writeFileSync('TestScreen.js');
-
             fs.writeFileSync(jsonTestFileName, '{}');
             let fileContentWithIgnoredCases = 'import React from "react";\n' +
                 'const ignoredCase1 = StyleSheet.get("smiley");\n' +
@@ -758,6 +756,9 @@ describe('Extract And Replace Script', () => {
                 `  }\n\n` +
                 `}`;
 
+            fs.writeFileSync('output/TestScreen.js', fileContentWithIgnoredCases);
+
+
             parser.replaceStringsWithKeys(
                 fileContentWithIgnoredCases,
                 'TestScreen.js',
@@ -768,8 +769,6 @@ describe('Extract And Replace Script', () => {
         });
 
         it('should ignore text in flexDirection style call ', () => {
-            fs.writeFileSync('TestScreen.js');
-
             fs.writeFileSync(jsonTestFileName, '{}');
             let fileContentWithIgnoredCases = 'import React from "react";\n' +
                 '<View style={{\n' +
@@ -780,6 +779,9 @@ describe('Extract And Replace Script', () => {
                 '    const flexDirection = mission.status === "RECOMMENDED" || mission.status === "SKIPPED" ? "text1" : "text2";\n' +
                 '  }\n\n' +
                 '}';
+
+            fs.writeFileSync('output/TestScreen.js', fileContentWithIgnoredCases);
+
 
             parser.replaceStringsWithKeys(
                 fileContentWithIgnoredCases,
@@ -801,7 +803,7 @@ describe('Extract And Replace Script', () => {
                 `  }\n\n` +
                 `}`;
             let expectedfileContentWithVariableDeclaration = 'import React from "react";\n' +
-                'import I18n from "../services/internationalizations/i18n";\n' +
+                'import I18n from "../services/internationalizations/i18n";\n\n' +
                 'const darkGrayCopyOptions = [{\n' +
                 '  A: I18n.t("TestScreen.ObjectProperty.index(0)"),\n' +
                 '  B: I18n.t("TestScreen.ObjectProperty.index(1)")\n' +
@@ -823,18 +825,18 @@ describe('Extract And Replace Script', () => {
 
             expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedfileContentWithVariableDeclaration);
         });
-        //const firstCalibrationPhrases = ["Connecting your Shapa to your phone", "Measuring your weight", "Loading your stats to the server"];
+
         it('should replace text in array declaration in side variable declaration ', () => {
-            let originalfileContentWithVariableDeclaration = 'import React from "react";\n' +
+            let originalfileContentWithVariableDeclaration = 'import React from "react";\n\n' +
                 'const firstCalibrationPhrases = ["Connecting your Shapa to your phone", "Measuring your weight"];\n\n' +
-                'class TestClass extends React.Component {\n'+
+                'class TestClass extends React.Component {\n' +
                 '  render() {\n' +
                 '   return <View></View>;\n' +
                 '  }\n\n' +
                 '}';
-            let expectedfileContentWithVariableDeclaration = 'import I18n from "../services/internationalizations/i18n";\n' +
-                'import React from "react";\n' +
-                'const firstCalibrationPhrases = ['+
+            let expectedfileContentWithVariableDeclaration = 'import React from "react";\n' +
+                'import I18n from "../services/internationalizations/i18n";\n\n' +
+                'const firstCalibrationPhrases = [' +
                 'I18n.t("TestScreen.ObjectProperty.index(0)"),' +
                 ' I18n.t("TestScreen.ObjectProperty.index(1)")' +
                 '];\n\n' +
@@ -855,6 +857,7 @@ describe('Extract And Replace Script', () => {
 
             expect(parser.readJsFileContent('output/TestScreen.js')).to.eql(expectedfileContentWithVariableDeclaration);
         });
+
         it('should put an evaluation curly bracket on an attributes value if it is inside a greater expression', () => {
             let originalFileContentWithATitleProp = `import React from "react";\n` +
                 `class TestClass extends React.Component {\n` +
@@ -975,11 +978,10 @@ describe('Extract And Replace Script', () => {
             expect(extractedStrings).to.eql(expectedFileContent);
         });
 
-        //return `Today and tomorrow, this mission will appear on your calendar at this time:`;
         it('should retrieve text in return statement', () => {
             let originalJsWithReturnStatement = 'import React from "react";\n' +
                 'class TestClass extends React.Component {\n' +
-                '  render() {\n' +
+                '  calculate() {\n' +
                 '   return "Today and tomorrow, this mission will appear on your calendar at this time:";\n' +
                 ' }\n' +
                 '}';
@@ -987,8 +989,8 @@ describe('Extract And Replace Script', () => {
             let expectedFileContent = 'import React from "react";\n' +
                 'import I18n from "../services/internationalizations/i18n";\n\n' +
                 'class TestClass extends React.Component {\n' +
-                '  render() {\n' +
-                '    return "{I18n.t(\\"TestScreen.ReturnExpression.index(0)\\")}";\n' +
+                '  calculate() {\n' +
+                '    return I18n.t(\"TestScreen.ReturnExpression.index(0)\");\n' +
                 '  }\n\n' +
                 '}';
             fs.writeFileSync(jsonTestFileName, '{}');
@@ -1001,22 +1003,22 @@ describe('Extract And Replace Script', () => {
             expect(extractedStrings).to.eql(expectedFileContent);
         });
 
-        //return `Today and tomorrow, this mission will appear on your calendar at this time:`;
         it('should not retrieve text in return statement of calculateKeyboardType', () => {
             let originalJsWithReturnStatement = 'import React from "react";\n' +
                 'class TestClass extends React.Component {\n' +
                 '  calculateKeyboardType() {\n' +
-                'if (keyRepresentation === "idealWeight")\n' +
-                '   return "Today and tomorrow, this mission will appear on your calendar at this time:";\n' +
+                '    if (keyRepresentation === "idealWeight")\n' +
+                '      return "Today and tomorrow, this mission will appear on your calendar at this time:";\n' +
                 ' }\n' +
                 '}';
             fs.writeFileSync(jsonTestFileName, '{}');
             let expectedFileContent =
-                'import React from "react";\n\n' +
+                'import React from "react";\n' +
                 'class TestClass extends React.Component {\n' +
                 '  calculateKeyboardType() {\n' +
-                '    if (keyRepresentation === "idealWeight") return "Today and tomorrow, this mission will appear on your calendar at this time:";\n' +
-                '  }\n\n' +
+                '    if (keyRepresentation === "idealWeight")\n' +
+                '      return "Today and tomorrow, this mission will appear on your calendar at this time:";\n' +
+                ' }\n' +
                 '}';
             fs.writeFileSync(jsonTestFileName, '{}');
             let extractedStrings = parser.replaceStringsWithKeys(
@@ -1051,6 +1053,37 @@ describe('Extract And Replace Script', () => {
                 "type": "JSXText",
                 "value": "Hello, world!"
             });
+        });
+
+        it('should not insert an import statement if one already exists', () => {
+            let originalFileContent = 'import React from "react";\n' +
+                'import I18n from "../services/internationalizations/i18n";\n\n' +
+                'class TestClass extends React.Component {\n' +
+                '  render() {\n' +
+                '    return <Text></Text>;\n' +
+                '  }\n\n' +
+                '}';
+
+            fs.writeFileSync('test.json', '{}');
+            let actualFileContent = parser.replaceStringsWithKeys(originalFileContent, 'TestScreen.js', 'test.json');
+            expect(actualFileContent).to.eql(originalFileContent);
+        });
+
+        it('should not extract text inside an I18n function call', () => {
+            let originalFileContent = 'import React from "react";\n' +
+                'import I18n from "../services/internationalizations/i18n";\n\n' +
+                'class TestClass extends React.Component {\n' +
+                '  constructor() {\n' +
+                '    return I18n.t(\"TestScreen.ReturnExpression.index(0)\");\n' +
+                '  }\n\n' +
+                '  render() {\n' +
+                '    return <View title={I18n.t("TestScreen.JSXAttribute.index(0)")}></View>\n' +
+                '  }\n\n' +
+                '}';
+
+            fs.writeFileSync('test.json', '{}');
+            let actualFileContent = parser.replaceStringsWithKeys(originalFileContent, 'TestScreen.js', 'test.json');
+            expect(actualFileContent).to.eql(originalFileContent);
         });
     })
 });

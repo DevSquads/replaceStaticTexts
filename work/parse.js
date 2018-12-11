@@ -18,13 +18,26 @@ exports.writeImportStatementToJsFile = (parsedTree, jsFilePath) => {
     let i18nPath = '../'.repeat(jsFileDirDepth) + 'services/internationalizations/i18n';
     babelTraverse.default(parsedTree, {
         Program(path) {
-            const lastImport = path.get("body").filter(p => p.isImportDeclaration()).pop();
+            let importAlreadyExists = false;
+            path.traverse({
+               ImportDeclaration(path) {
+                   if(path.node.specifiers[0].local.name === 'I18n') {
+                       importAlreadyExists = true;
+                   }
+               }
+            });
+            if(importAlreadyExists) {
+                return;
+            }
+            let lastImport = path.get("body").filter(p => p.isImportDeclaration()).pop();
             const identifier = babelTypes.identifier('I18n');
             const importDefaultSpecifier = babelTypes.importDefaultSpecifier(identifier);
             const importDeclaration = babelTypes.importDeclaration([importDefaultSpecifier], babelTypes.stringLiteral(i18nPath));
 
             if (lastImport) {
                 lastImport.insertAfter(importDeclaration);
+                lastImport = path.get("body").filter(p => p.isImportDeclaration()).pop();
+                lastImport.insertAfter(babelTypes.jsxEmptyExpression());
             }
         }
     });
@@ -80,6 +93,9 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFileP
     if (extractedStrings.length) {
         exports.writeImportStatementToJsFile(parsedTree, jsFilePath);
     }
+    else {
+        return fileContent;
+    }
 
     let nodeProcessors = {
         parsedTree: parsedTree,
@@ -115,19 +131,11 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFileP
         }
         ,
         callExpressionNodeProcessor(path, extractedStringsWithKeyAndPath, isAnExpression) {
-            if (isAnExpression) {
-                path.node.value = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-            } else {
-                path.node.value = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
-            }
+            path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
             extractedStringsWithKeyAndPath.shift();
         },
         returnExpressionNodeProcessor(path, extractedStringsWithKeyAndPath, isAnExpression) {
-            if (isAnExpression) {
-                path.node.value = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-            } else {
-                path.node.value = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
-            }
+            path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
             extractedStringsWithKeyAndPath.shift();
         }
     };
@@ -231,7 +239,8 @@ const shouldBeIgnored = path => {
         'generateChoiceSelection',
         'generateTimeSelection',
         'localMoment',
-
+        'I18n',
+        't'
     ];
     return ignoredPaths.includes(path.node.name);
 };
@@ -279,13 +288,27 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
         JSXOpeningElement(path) {
             path.traverse({
                 JSXAttribute(path) {
+                    let shouldNotIgnorePath = true;
                     let isAnExpression = false;
                     path.traverse({
                         JSXExpressionContainer(path) {
                             isAnExpression = true;
                             return;
+                        },
+                        Identifier(path) {
+                            if (shouldBeIgnored(path)) {
+                                shouldNotIgnorePath = false;
+                                return;
+                            }
+                        },
+                        JSXIdentifier(path) {
+                            if (shouldBeIgnored(path)) {
+                                shouldNotIgnorePath = false;
+                                return;
+                            }
                         }
                     });
+
                     if (path.node.name.name === 'title' ||
                         path.node.name.name === 'content' ||
                         path.node.name.name === 'placeholder' ||
@@ -297,24 +320,24 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                         path.node.name.name === 'sectionTitle' ||
                         path.node.name.name === 'sectionText' ||
                         path.node.name.name === 'info') {
-
-                        path.traverse({
-                            StringLiteral(path) {
-                                if (!isVisited(visitedNodePaths, path)) {
-                                    if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
-                                        opts.jsxTitleAttributeNodeProcessor(path, opts.processedObject, isAnExpression);
+                        if(shouldNotIgnorePath) {
+                            path.traverse({
+                                StringLiteral(path) {
+                                    if (!isVisited(visitedNodePaths, path)) {
+                                        if (exports.cleanUpExtractedString(path.node.extra.rawValue).length !== 0) {
+                                            opts.jsxTitleAttributeNodeProcessor(path, opts.processedObject, isAnExpression);
+                                        }
+                                    }
+                                },
+                                TemplateElement(path) {
+                                    if (!isVisited(visitedNodePaths, path)) {
+                                        if (exports.cleanUpExtractedString(path.node.value.raw).length !== 0) {
+                                            opts.templateElementNodeProcessor(path, opts.processedObject);
+                                        }
                                     }
                                 }
-                            },
-                            TemplateElement(path) {
-                                if (!isVisited(visitedNodePaths, path)) {
-                                    if (exports.cleanUpExtractedString(path.node.value.raw).length !== 0) {
-                                        opts.templateElementNodeProcessor(path, opts.processedObject);
-                                    }
-                                }
-                            }
-                        })
-
+                            });
+                        }
                     }
                 }
             })
@@ -331,7 +354,6 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
                 shouldNotBeIgnored = false;
             }
             path.traverse({
-
                 Identifier(path) {
                     if (shouldBeIgnored(path)) {
                         shouldNotBeIgnored = false;
@@ -638,14 +660,14 @@ const walkSync = (dir, filelist) => {
 (function main() {
     //validatedInput_ValidatedInput
     ///Users/xamohsen/devsquads/shapa-react-native/src/components/buttons/AddPhotoButton.js
-    let dirPath = '/Users/xamohsen/devsquads/shapa-react-native/src/components/';
+    let dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src/components';
     if (!fs.existsSync('output')) {
         fs.mkdirSync('output');
     }
     let files = walkSync(dirPath, []);
     files.forEach(jsFilePath => {
-            if (jsFilePath.endsWith('.js') && !jsFilePath.endsWith('LanguageSetting.js') && !jsFilePath.toUpperCase().includes('DEPRECATED')) {
-                let jsFileName = jsFilePath.split('/').reverse()[0];
+            if (jsFilePath.endsWith('WeightHistory.js') && !jsFilePath.endsWith('LanguageSetting.js') && !jsFilePath.endsWith('App.js') && !jsFilePath.toUpperCase().includes('DEPRECATED')) {
+                let jsFileName = jsFilePath.split('/').reverse()[1] + '_' + jsFilePath.split('/').reverse()[0];
                 let jsonFilePath = './work/en.json';
                 let jsFileContent = exports.readJsFileContent(jsFilePath);
                 console.log(jsFileName);
