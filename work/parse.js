@@ -189,7 +189,8 @@ const isVisited = (visitedNodePaths, path) => {
 };
 
 const shouldBeIgnored = path => {
-    let ignoredPaths = ['StyleSheet',
+    let ignoredPaths = [
+        'StyleSheet',
         'Dimensions',
         'emoji',
         'setDrawerEnabled',
@@ -240,7 +241,9 @@ const shouldBeIgnored = path => {
         'generateTimeSelection',
         'localMoment',
         'I18n',
-        't'
+        't',
+        'bulletsDirection',
+        'map'
     ];
     return ignoredPaths.includes(path.node.name);
 };
@@ -660,13 +663,13 @@ const walkSync = (dir, filelist) => {
 (function main() {
     //validatedInput_ValidatedInput
     ///Users/xamohsen/devsquads/shapa-react-native/src/components/buttons/AddPhotoButton.js
-    let dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src/components';
+    let dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src/utils';
     if (!fs.existsSync('output')) {
         fs.mkdirSync('output');
     }
     let files = walkSync(dirPath, []);
     files.forEach(jsFilePath => {
-            if (jsFilePath.endsWith('WeightHistory.js') && !jsFilePath.endsWith('LanguageSetting.js') && !jsFilePath.endsWith('App.js') && !jsFilePath.toUpperCase().includes('DEPRECATED')) {
+            if (jsFilePath.endsWith('.js') && !jsFilePath.endsWith('LanguageSetting.js') && !jsFilePath.endsWith('App.js') && !jsFilePath.toUpperCase().includes('DEPRECATED')) {
                 let jsFileName = jsFilePath.split('/').reverse()[1] + '_' + jsFilePath.split('/').reverse()[0];
                 let jsonFilePath = './work/en.json';
                 let jsFileContent = exports.readJsFileContent(jsFilePath);
@@ -675,4 +678,4 @@ const walkSync = (dir, filelist) => {
             }
         }
     );
-});
+})();
