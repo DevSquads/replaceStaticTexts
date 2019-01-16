@@ -1,5 +1,12 @@
 # [INSERT PROJECT NAME HERE]
 
+## WELCOME!
+We're so glad you're thinking about contributing to a Devsquads open source project! If you're unsure about anything, just ask -- or submit the issue or pull request anyway. The worst that can happen is you'll be politely asked to change something. We love all friendly contributions.
+
+We want to ensure a welcoming environment for all of our projects. Our team follows the Contributor Covenant [Code of Conduct](https://github.com/DevSquads/replaceStaticTexts/blob/master/CODE_OF_CONDUCT) and all contributors should do the same.
+
+We encourage you to read this project's CONTRIBUTING [WILL BE A LINK] policy, and its [LICENSE](https://github.com/DevSquads/replaceStaticTexts/blob/master/LICENSE).
+
 ## What does this project do?
 [NAME] is a script that helps you extract translatable text in your Javascript project and optionally replace
 them with I18n method calls
