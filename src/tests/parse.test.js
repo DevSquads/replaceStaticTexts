@@ -1,5 +1,5 @@
 const expect = require("chai").expect;
-const parser = require("./parse");
+const parser = require("../parse");
 const fs = require('fs');
 
 describe('Extract And Replace Script', () => {

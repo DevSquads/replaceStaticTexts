@@ -631,7 +631,6 @@ const getParsedTree = jsFileContent => {
         presets: ["@babel/preset-react"],
         plugins: ["@babel/plugin-proposal-class-properties"]
     });
-    fs.writeFileSync('output-tree.json', JSON.stringify(parseTree));
     return parseTree;
 };
 
@@ -660,22 +659,22 @@ const walkSync = (dir, filelist) => {
     return filelist;
 };
 
-(function main() {
-    //validatedInput_ValidatedInput
-    ///Users/xamohsen/devsquads/shapa-react-native/src/components/buttons/AddPhotoButton.js
-    let dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src/utils';
-    if (!fs.existsSync('output')) {
-        fs.mkdirSync('output');
-    }
-    let files = walkSync(dirPath, []);
-    files.forEach(jsFilePath => {
-            if (jsFilePath.endsWith('.js') && !jsFilePath.endsWith('LanguageSetting.js') && !jsFilePath.endsWith('App.js') && !jsFilePath.toUpperCase().includes('DEPRECATED')) {
-                let jsFileName = jsFilePath.split('/').reverse()[1] + '_' + jsFilePath.split('/').reverse()[0];
-                let jsonFilePath = './work/en.json';
-                let jsFileContent = exports.readJsFileContent(jsFilePath);
-                console.log(jsFileName);
-                exports.replaceStringsWithKeys(jsFileContent, jsFileName, jsonFilePath, jsFilePath);
-            }
-        }
-    );
-})();
+// (function main() {
+//     //validatedInput_ValidatedInput
+//     ///Users/xamohsen/devsquads/shapa-react-native/src/components/buttons/AddPhotoButton.js
+//     let dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src/utils';
+//     if (!fs.existsSync('output')) {
+//         fs.mkdirSync('output');
+//     }
+//     let files = walkSync(dirPath, []);
+//     files.forEach(jsFilePath => {
+//             if (jsFilePath.endsWith('.js') && !jsFilePath.endsWith('LanguageSetting.js') && !jsFilePath.endsWith('App.js') && !jsFilePath.toUpperCase().includes('DEPRECATED')) {
+//                 let jsFileName = jsFilePath.split('/').reverse()[1] + '_' + jsFilePath.split('/').reverse()[0];
+//                 let jsonFilePath = './src/en.json';
+//                 let jsFileContent = exports.readJsFileContent(jsFilePath);
+//                 console.log(jsFileName);
+//                 exports.replaceStringsWithKeys(jsFileContent, jsFileName, jsonFilePath, jsFilePath);
+//             }
+//         }
+//     );
+// });
