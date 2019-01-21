@@ -4,7 +4,7 @@
   "description": "",
   "main": "work/parse.js",
   "scripts": {
-    "test": "mocha src/tests/"
+    "test": "mocha src/tests/  --reporter mocha-junit-reporter"
   },
   "author": "",
   "license": "ISC",
@@ -23,6 +23,7 @@
     "unbend": "^2.1.2"
   },
   "devDependencies": {
-    "@babel/preset-react": "^7.0.0"
+    "@babel/preset-react": "^7.0.0",
+    "mocha-junit-reporter": "^1.18.0"
   }
 }
