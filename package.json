@@ -4,7 +4,8 @@
   "description": "",
   "main": "work/parse.js",
   "scripts": {
-    "test": "mocha src/tests/ "
+    "test": "mocha src/tests/",
+    "lint": "eslint src/"
   },
   "author": "",
   "license": "ISC",
