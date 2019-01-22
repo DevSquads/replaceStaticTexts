@@ -4,7 +4,7 @@
   "description": "",
   "main": "work/parse.js",
   "scripts": {
-    "test": "mocha src/tests/  --reporter mocha-junit-reporter"
+    "test": "mocha src/tests/ "
   },
   "author": "",
   "license": "ISC",
