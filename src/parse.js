@@ -1,3 +1,4 @@
+/* eslint no-shadow: 0 no-param-reassign: 0 */
 const babelParser = require('@babel/core');
 const babelTraverse = require('@babel/traverse');
 const babelGenerator = require('@babel/generator');
@@ -164,7 +165,7 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
           let shouldNotIgnorePath = true;
           let isAnExpression = false;
           path.traverse({
-            JSXExpressionContainer(path) {
+            JSXExpressionContainer() {
               isAnExpression = true;
             },
             Identifier(path) {
@@ -234,7 +235,7 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
             return;
           }
           path.traverse({
-            JSXExpressionContainer(path) {
+            JSXExpressionContainer() {
               isAnExpression = true;
             },
           });
@@ -245,7 +246,7 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
             return;
           }
           path.traverse({
-            JSXExpressionContainer(path) {
+            JSXExpressionContainer() {
               isAnExpression = true;
             },
           });
@@ -490,6 +491,14 @@ exports.writeImportStatementToJsFile = (parsedTree, jsFilePath) => {
   });
 };
 
+const getParsedTree = (jsFileContent) => {
+  const parseTree = babelParser.parse(jsFileContent, {
+    presets: ['@babel/preset-react'],
+    plugins: ['@babel/plugin-proposal-class-properties'],
+  });
+  return parseTree;
+};
+
 exports.extractStrings = (jsFileContent) => {
   const nodeProcessors = {
     parsedTree: getParsedTree(jsFileContent),
@@ -549,9 +558,17 @@ exports.extractStrings = (jsFileContent) => {
   return traverseAndProcessAbstractSyntaxTree(jsFileContent, nodeProcessors);
 };
 
+const writeToFile = (jsFileName, newFileContent) => {
+  fs.writeFileSync(jsFileName, newFileContent.code);
+};
+
 exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFilePath = `output/${jsFileName}`) => {
   const extractedStrings = exports.extractStrings(fileContent);
-  const extractedStringsWithKeyAndPath = exports.writeToJsonFile(jsonFileName, jsFileName, extractedStrings);
+  const extractedStringsWithKeyAndPath = exports.writeToJsonFile(
+    jsonFileName,
+    jsFileName,
+    extractedStrings,
+  );
   const parsedTree = getParsedTree(fileContent);
   if (extractedStrings.length) {
     exports.writeImportStatementToJsFile(parsedTree, jsFilePath);
@@ -567,7 +584,7 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFileP
       extractedStringsWithKeyAndPath.shift();
     },
     jsxExpressionContainerNodeProcessor(path, extractedStringsWithKeyAndPath) {
-      path.node.extra.raw = `I18n.t(\"${extractedStringsWithKeyAndPath[0].key}\")`;
+      path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
       extractedStringsWithKeyAndPath.shift();
     },
     jsxTitleAttributeNodeProcessor(path, extractedStringsWithKeyAndPath, isAnExpression) {
@@ -579,7 +596,7 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFileP
       extractedStringsWithKeyAndPath.shift();
     },
     templateElementNodeProcessor(path, extractedStringsWithKeyAndPath) {
-      path.node.value.raw = '${I18n.t("' + `${extractedStringsWithKeyAndPath[0].key}` + '")}';
+      path.node.value.raw = `\${I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
       extractedStringsWithKeyAndPath.shift();
     },
     conditionalExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
@@ -590,11 +607,11 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFileP
       path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
       extractedStringsWithKeyAndPath.shift();
     },
-    callExpressionNodeProcessor(path, extractedStringsWithKeyAndPath, isAnExpression) {
+    callExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
       path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
       extractedStringsWithKeyAndPath.shift();
     },
-    returnExpressionNodeProcessor(path, extractedStringsWithKeyAndPath, isAnExpression) {
+    returnExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
       path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
       extractedStringsWithKeyAndPath.shift();
     },
@@ -605,6 +622,11 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFileP
   const newFileContent = babelGenerator.default(parsedTree, { sourceMap: true }, fileContent);
   writeToFile(jsFilePath, newFileContent);
   return newFileContent.code;
+};
+
+const getJsonDictObject = (jsonFileName) => {
+  const fileContent = exports.readJsFileContent(jsonFileName);
+  return JSON.parse(fileContent);
 };
 
 exports.writeToJsonFile = (jsonFileName, jsFileName, extractedStrings) => {
@@ -618,7 +640,14 @@ exports.writeToJsonFile = (jsonFileName, jsFileName, extractedStrings) => {
     } else {
       jsxTypeCount[extractedStrings[index].type] = 1;
     }
-    insertNewEntryInJsonObject(jsFileName, extractedStrings, index, jsonFileContent, extractedStringsWithKeyAndPath, jsxTypeCount[extractedStrings[index].type]);
+    insertNewEntryInJsonObject(
+      jsFileName,
+      extractedStrings,
+      index,
+      jsonFileContent,
+      extractedStringsWithKeyAndPath,
+      jsxTypeCount[extractedStrings[index].type],
+    );
   }
 
   writeToJsonFileWithIndentation(jsonFileName, jsonFileContent);
@@ -634,32 +663,15 @@ exports.cleanUpExtractedString = (extractedString) => {
   return extractedString.replace(/[\t\n]+/gm, ' ').trim();
 };
 
-const writeToFile = (jsFileName, newFileContent) => {
-  fs.writeFileSync(jsFileName, newFileContent.code);
-};
-
-const getJsonDictObject = (jsonFileName) => {
-  const fileContent = exports.readJsFileContent(jsonFileName);
-  return JSON.parse(fileContent);
-};
-
-const getParsedTree = (jsFileContent) => {
-  const parseTree = babelParser.parse(jsFileContent, {
-    presets: ['@babel/preset-react'],
-    plugins: ['@babel/plugin-proposal-class-properties'],
-  });
-  return parseTree;
-};
-
-const walkSync = (dir, filelist) => {
-  const files = fs.readdirSync(dir);
-  filelist = filelist || [];
-  files.forEach((file) => {
-    if (fs.statSync(`${dir}/${file}`).isDirectory()) {
-      filelist = walkSync(`${dir}/${file}`, filelist);
-    } else {
-      filelist.push(`${dir}/${file}`);
-    }
-  });
-  return filelist;
-};
+// const walkSync = (dir, filelist) => {
+//   const files = fs.readdirSync(dir);
+//   filelist = filelist || [];
+//   files.forEach((file) => {
+//     if (fs.statSync(`${dir}/${file}`).isDirectory()) {
+//       filelist = walkSync(`${dir}/${file}`, filelist);
+//     } else {
+//       filelist.push(`${dir}/${file}`);
+//     }
+//   });
+//   return filelist;
+// };
