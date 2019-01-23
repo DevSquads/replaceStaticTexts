@@ -1,3 +1,7 @@
+/* globals describe it afterEach before after */
+/* eslint no-template-curly-in-string: 0
+          prefer-destructuring: 0
+*/
 const expect = require('chai').expect;
 const fs = require('fs');
 const parser = require('../parse');
@@ -48,7 +52,7 @@ describe('Extract And Replace Script', () => {
 
     after(() => {
       const files = fs.readdirSync('output');
-      for (let i = 0; i < files.length; i++) {
+      for (let i = 0; i < files.length; i += 1) {
         fs.unlinkSync(`output/${files[i]}`);
       }
       fs.rmdirSync('output');
@@ -168,7 +172,8 @@ describe('Extract And Replace Script', () => {
         key: 'TestScreen.JSXText.index(0)',
         value: 'Hello, world!',
       });
-      expect(fs.existsSync(jsonTestFileName)).to.be.true;
+      const fileExists = fs.existsSync(jsonTestFileName);
+      expect(fileExists).to.eql(true);
       const jsonFileContent = fs.readFileSync(jsonTestFileName, 'utf8');
       expect(jsonFileContent).to.eql('{\n    "AnotherTestScreen.JSXText.index(0)": "Just another text",\n   '
           + ' "TestScreen.JSXText.index(0)": "Hello, world!"\n}');
@@ -238,7 +243,6 @@ describe('Extract And Replace Script', () => {
     });
 
     it('should not throw an exception when an expression with a non string value is met', () => {
-      const stringType = 'JSXExpressionContainer';
       const originalFileContentWithANonLiteralStringContainer = 'import React from "react";\n'
           + 'class TestClass extends React.Component {\n'
           + '  render() {\n'
@@ -991,7 +995,7 @@ describe('Extract And Replace Script', () => {
           + 'import I18n from "../services/internationalizations/i18n";\n\n'
           + 'class TestClass extends React.Component {\n'
           + '  calculate() {\n'
-          + '    return I18n.t(\"TestScreen.ReturnExpression.index(0)\");\n'
+          + '    return I18n.t("TestScreen.ReturnExpression.index(0)");\n'
           + '  }\n\n'
           + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
@@ -1074,7 +1078,7 @@ describe('Extract And Replace Script', () => {
           + 'import I18n from "../services/internationalizations/i18n";\n\n'
           + 'class TestClass extends React.Component {\n'
           + '  constructor() {\n'
-          + '    return I18n.t(\"TestScreen.ReturnExpression.index(0)\");\n'
+          + '    return I18n.t("TestScreen.ReturnExpression.index(0)");\n'
           + '  }\n\n'
           + '  render() {\n'
           + '    return <View title={I18n.t("TestScreen.JSXAttribute.index(0)")}></View>\n'
