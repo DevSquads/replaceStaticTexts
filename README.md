@@ -10,7 +10,7 @@ We encourage you to read this project's CONTRIBUTING [WILL BE A LINK] policy, an
 Extracting and replacing texts for internationalization is a tedious task with a lot of manual work that is prone to human error.  
 Using this script saves you all that work and removes human error completely.
 ## What does this project do?
-[NAME] is a script that helps you extract translatable text in your Javascript project and optionally replace
+replaceStaticTexts is a script that helps you extract translatable text in your Javascript project and optionally replace
 them with I18n method calls
 ## How do I get started?
 Just clone this repo
@@ -19,4 +19,4 @@ Install the needed packages with `npm install` .
 Use `npm test` to run the tests .   
 Use `node main.js path/to/dictionary.json path/to/your/project/src` to apply our script .  
 ## Where can I get more help, if I need it?
-You can contact us on [INSERT TEAM MAIL HERE]
+You can contact us on omar@devsquads.com
