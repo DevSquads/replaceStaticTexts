@@ -339,7 +339,7 @@ describe('Extract And Replace Script', () => {
     });
 
     it('should retrieve texts inside errMessage prop', () => {
-      const originalFileContentWithAerrMessageProp = 'import React from "react";\n'
+      const originalFileContentWithErrorMessageProp = 'import React from "react";\n'
           + 'class TestClass extends React.Component {\n'
           + '  render() {\n'
           + '    return (\n'
@@ -354,7 +354,7 @@ describe('Extract And Replace Script', () => {
           + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
-      const extractedStrings = parser.extractStrings(originalFileContentWithAerrMessageProp);
+      const extractedStrings = parser.extractStrings(originalFileContentWithErrorMessageProp);
 
       expect(extractedStrings).to.deep.contain({
         path: 'program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression',
@@ -388,7 +388,7 @@ describe('Extract And Replace Script', () => {
       });
     });
 
-    it('should retrieve texts inside placeholder/tip/erromessage prop', () => {
+    it('should retrieve texts inside placeholder/tip/errorMessage prop', () => {
       const originalFileContentWithAPlaceholderProp = 'import React from "react";\n'
           + 'class TestClass extends React.Component {\n'
           + '  render() {\n'
@@ -397,7 +397,7 @@ describe('Extract And Replace Script', () => {
           + '   {someCondition && console.log(\'test\')}'
           + '      <Text style={"center"} placeholder={"TEST_PLACEHOLDER"}>{"Hello, world!"}</Text>\n'
           + '      <Text style={"center"} tip={"TEST_tip"}>{"Hello, world!"}</Text>\n'
-          + '      <Text style={"center"} errormessage={"TEST_errormessage"}>{"Hello, world!"}</Text>\n'
+          + '      <Text style={"center"} errorMessage={"TEST_errorMessage"}>{"Hello, world!"}</Text>\n'
 
           + '      <View><Text>{"Another Text"}</Text></View>\n'
           + '      {120}\n'
@@ -421,7 +421,7 @@ describe('Extract And Replace Script', () => {
       }, {
         path: 'program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression',
         type: 'JSXAttribute',
-        value: 'TEST_errormessage',
+        value: 'TEST_errorMessage',
       });
     });
 
@@ -627,7 +627,7 @@ describe('Extract And Replace Script', () => {
           + 'class TestClass extends React.Component {\n'
           + '  render() {\n'
           + '   this.MODAL_CONTENT = {\n'
-          + '       title: "Friendly Shapa reminder"\n'
+          + '       title: "Test title"\n'
           + '  }\n'
           + ' }\n'
           + '}';
@@ -833,7 +833,7 @@ describe('Extract And Replace Script', () => {
 
     it('should replace text in array declaration in side variable declaration ', () => {
       const originalfileContentWithVariableDeclaration = 'import React from "react";\n\n'
-          + 'const firstCalibrationPhrases = ["Connecting your Shapa to your phone", "Measuring your weight"];\n\n'
+          + 'const firstCalibrationPhrases = ["First string", "Second string"];\n\n'
           + 'class TestClass extends React.Component {\n'
           + '  render() {\n'
           + '   return <View></View>;\n'

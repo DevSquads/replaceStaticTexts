@@ -5,3 +5,4 @@ node_modules
 output
 en.json
 TestScreen.js
+.history
