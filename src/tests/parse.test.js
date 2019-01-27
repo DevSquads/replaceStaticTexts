@@ -4,33 +4,37 @@
 */
 const expect = require('chai').expect;
 const fs = require('fs');
+const path = require('path');
 const parser = require('../parse');
 
+emptyFunction = (parsedTree, jsFilePath) => {
+  console.log('this is an empty function');
+};
 describe('Extract And Replace Script', () => {
   describe('Extraction', () => {
     const originalFileContentWithJSXText = 'import React from "react";\n'
-        + 'class TestClass extends React.Component {\n'
-        + '  render() {\n'
-        + '    return (\n'
-        + '    <View>\n'
-        + '      <Text>Hello, world!</Text>\n'
-        + '      <View><Text>Another Text</Text></View>\n'
-        + '    </View>\n'
-        + '    );\n'
-        + '  }\n'
-        + '}';
+      + 'class TestClass extends React.Component {\n'
+      + '  render() {\n'
+      + '    return (\n'
+      + '    <View>\n'
+      + '      <Text>Hello, world!</Text>\n'
+      + '      <View><Text>Another Text</Text></View>\n'
+      + '    </View>\n'
+      + '    );\n'
+      + '  }\n'
+      + '}';
 
     const originalFileContentWithExpressionText = 'import React from "react";\n'
-        + 'class TestClass extends React.Component {\n'
-        + '  render() {\n'
-        + '    return (\n'
-        + '    <View>\n'
-        + '      <Text>{"Hello, world!"}</Text>\n'
-        + '      <View><Text>{"Another Text"}</Text></View>\n'
-        + '    </View>\n'
-        + '    );\n'
-        + '  }\n'
-        + '}';
+      + 'class TestClass extends React.Component {\n'
+      + '  render() {\n'
+      + '    return (\n'
+      + '    <View>\n'
+      + '      <Text>{"Hello, world!"}</Text>\n'
+      + '      <View><Text>{"Another Text"}</Text></View>\n'
+      + '    </View>\n'
+      + '    );\n'
+      + '  }\n'
+      + '}';
 
     const jsonTestFileName = 'test.json';
     const jsTestFileName = 'test.js';
@@ -74,21 +78,21 @@ describe('Extract And Replace Script', () => {
 
     it('should write import statement to the beginning of js file', () => {
       const originalJsFileContent = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return (\n'
-          + '          <Text>Hello, world!</Text>\n'
-          + '    );\n'
-          + '  }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '          <Text>Hello, world!</Text>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
 
       const expectedJsFileContent = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return <Text>{I18n.t("TestScreen.JSXText.index(0)")}</Text>;\n'
-          + '  }\n\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return <Text>{I18n.t("TestScreen.JSXText.index(0)")}</Text>;\n'
+        + '  }\n\n'
+        + '}';
       fs.writeFileSync('TestScreen.js', originalJsFileContent);
       fs.writeFileSync(jsonTestFileName, '{}');
 
@@ -110,13 +114,13 @@ describe('Extract And Replace Script', () => {
 
     it('should extract a string inside a Text component from a js file inside a render function', () => {
       const jsFileContent = 'import React from "react";'
-          + 'class TestClass extends React.Component {'
-          + '  render() {'
-          + '    return ('
-          + '          <Text>Hello, world!</Text>'
-          + '    );'
-          + '  }'
-          + '}';
+        + 'class TestClass extends React.Component {'
+        + '  render() {'
+        + '    return ('
+        + '          <Text>Hello, world!</Text>'
+        + '    );'
+        + '  }'
+        + '}';
       const returnedStrings = parser.extractStrings(jsFileContent);
 
       expect(returnedStrings.length).to.eql(1);
@@ -176,21 +180,53 @@ describe('Extract And Replace Script', () => {
       expect(fileExists).to.eql(true);
       const jsonFileContent = fs.readFileSync(jsonTestFileName, 'utf8');
       expect(jsonFileContent).to.eql('{\n    "AnotherTestScreen.JSXText.index(0)": "Just another text",\n   '
-          + ' "TestScreen.JSXText.index(0)": "Hello, world!"\n}');
+        + ' "TestScreen.JSXText.index(0)": "Hello, world!"\n}');
+    });
+
+    it('should insert import I8n statment in the JS file', () => {
+      const originalFileContent = 'import React from "react";\n\n'
+        + '//comment\n'
+        + 'import {View} from "react-native";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View>\n'
+        + '      <Text>Hello, world!</Text>\n'
+        + '      <View><Text>Another Text</Text></View>\n'
+        + '    </View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
+      const fileContentWithI18nImportStatment = parser.writeImportStatementToJSContent(originalFileContent);
+      const expectedFileContent = 'import React from "react";\n\n'
+        + '//comment\n'
+        + 'import {View} from "react-native";\n'
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View>\n'
+        + '      <Text>Hello, world!</Text>\n'
+        + '      <View><Text>Another Text</Text></View>\n'
+        + '    </View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
+      expect(fileContentWithI18nImportStatment).to.eql(expectedFileContent);
     });
 
     it('should replace the extracted JSXText strings with generated key', () => {
       const modifiedFileContent = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return <View>\n'
-          + '      <Text>{I18n.t("TestScreen.JSXText.index(0)")}</Text>\n'
-          + '      <View><Text>{I18n.t("TestScreen.JSXText.index(1)")}</Text></View>\n'
-          + '    </View>;\n'
-          + '  }\n'
-          + '\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return <View>\n'
+        + '      <Text>{I18n.t("TestScreen.JSXText.index(0)")}</Text>\n'
+        + '      <View><Text>{I18n.t("TestScreen.JSXText.index(1)")}</Text></View>\n'
+        + '    </View>;\n'
+        + '  }\n'
+        + '\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       const jsFileContentWithReplacedKeys = parser.replaceStringsWithKeys(originalFileContentWithJSXText, 'TestScreen.js', jsonTestFileName);
@@ -200,16 +236,16 @@ describe('Extract And Replace Script', () => {
 
     it('should replace the extracted ExpressionText strings with generated key', () => {
       const modifiedFileContent = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return <View>\n'
-          + '      <Text>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>\n'
-          + '      <View><Text>{I18n.t("TestScreen.JSXExpressionContainer.index(1)")}</Text></View>\n'
-          + '    </View>;\n'
-          + '  }\n'
-          + '\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return <View>\n'
+        + '      <Text>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>\n'
+        + '      <View><Text>{I18n.t("TestScreen.JSXExpressionContainer.index(1)")}</Text></View>\n'
+        + '    </View>;\n'
+        + '  }\n'
+        + '\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       const jsFileContentWithReplacedKeys = parser.replaceStringsWithKeys(originalFileContentWithExpressionText, 'TestScreen.js', jsonTestFileName);
@@ -219,17 +255,17 @@ describe('Extract And Replace Script', () => {
 
     it('should not throw an exception when a non literal string expression container is met', () => {
       const originalFileContentWithANonLiteralStringContainer = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return (\n'
-          + '    <View>\n'
-          + '   {someCondition && console.log(\'test\')}'
-          + '      <Text>{"Hello, world!"}</Text>\n'
-          + '      <View><Text>{"Another Text"}</Text></View>\n'
-          + '    </View>\n'
-          + '    );\n'
-          + '  }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View>\n'
+        + '   {someCondition && console.log(\'test\')}'
+        + '      <Text>{"Hello, world!"}</Text>\n'
+        + '      <View><Text>{"Another Text"}</Text></View>\n'
+        + '    </View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
       fs.writeFileSync('TestScreen.js', '');
 
@@ -244,18 +280,18 @@ describe('Extract And Replace Script', () => {
 
     it('should not throw an exception when an expression with a non string value is met', () => {
       const originalFileContentWithANonLiteralStringContainer = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return (\n'
-          + '    <View>\n'
-          + '   {someCondition && console.log(\'test\')}'
-          + '      <Text>{"Hello, world!"}</Text>\n'
-          + '      <View><Text>{"Another Text"}</Text></View>\n'
-          + '      {120}\n'
-          + '    </View>\n'
-          + '    );\n'
-          + '  }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View>\n'
+        + '   {someCondition && console.log(\'test\')}'
+        + '      <Text>{"Hello, world!"}</Text>\n'
+        + '      <View><Text>{"Another Text"}</Text></View>\n'
+        + '      {120}\n'
+        + '    </View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       expect(() => {
@@ -269,14 +305,14 @@ describe('Extract And Replace Script', () => {
 
     it('should not throw an exception when there is no strings to extract', () => {
       const originalFileContentWithNoStringsToRetrieve = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return (\n'
-          + '    <View>\n'
-          + '    </View>\n'
-          + '    );\n'
-          + '  }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View>\n'
+        + '    </View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       expect(() => {
@@ -290,18 +326,18 @@ describe('Extract And Replace Script', () => {
 
     it('should not retrieve text inside a style expression', () => {
       const originalFileContentWithAStyleExpression = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return (\n'
-          + '    <View>\n'
-          + '   {someCondition && console.log(\'test\')}'
-          + '      <Text style={"center"}>{"Hello, world!"}</Text>\n'
-          + '      <View><Text>{"Another Text"}</Text></View>\n'
-          + '      {120}\n'
-          + '    </View>\n'
-          + '    );\n'
-          + '  }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View>\n'
+        + '   {someCondition && console.log(\'test\')}'
+        + '      <Text style={"center"}>{"Hello, world!"}</Text>\n'
+        + '      <View><Text>{"Another Text"}</Text></View>\n'
+        + '      {120}\n'
+        + '    </View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       const extractedStrings = parser.extractStrings(originalFileContentWithAStyleExpression);
@@ -315,18 +351,18 @@ describe('Extract And Replace Script', () => {
 
     it('should retrieve texts inside title prop', () => {
       const originalFileContentWithATitleProp = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return (\n'
-          + '    <View>\n'
-          + '   {someCondition && console.log(\'test\')}'
-          + '      <Text style={"center"} title={"TEST_TITLE"}>{"Hello, world!"}</Text>\n'
-          + '      <View><Text>{"Another Text"}</Text></View>\n'
-          + '      {120}\n'
-          + '    </View>\n'
-          + '    );\n'
-          + '  }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View>\n'
+        + '   {someCondition && console.log(\'test\')}'
+        + '      <Text style={"center"} title={"TEST_TITLE"}>{"Hello, world!"}</Text>\n'
+        + '      <View><Text>{"Another Text"}</Text></View>\n'
+        + '      {120}\n'
+        + '    </View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       const extractedStrings = parser.extractStrings(originalFileContentWithATitleProp);
@@ -340,18 +376,18 @@ describe('Extract And Replace Script', () => {
 
     it('should retrieve texts inside errMessage prop', () => {
       const originalFileContentWithAerrMessageProp = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return (\n'
-          + '    <View>\n'
-          + '   {someCondition && console.log(\'test\')}'
-          + '      <Text style={"center"} errMessage={"TEST_errMessage"}>{"Hello, world!"}</Text>\n'
-          + '      <View><Text>{"Another Text"}</Text></View>\n'
-          + '      {120}\n'
-          + '    </View>\n'
-          + '    );\n'
-          + '  }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View>\n'
+        + '   {someCondition && console.log(\'test\')}'
+        + '      <Text style={"center"} errMessage={"TEST_errMessage"}>{"Hello, world!"}</Text>\n'
+        + '      <View><Text>{"Another Text"}</Text></View>\n'
+        + '      {120}\n'
+        + '    </View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       const extractedStrings = parser.extractStrings(originalFileContentWithAerrMessageProp);
@@ -365,18 +401,18 @@ describe('Extract And Replace Script', () => {
 
     it('should retrieve texts inside content prop', () => {
       const originalFileContentWithAContentProp = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return (\n'
-          + '    <View>\n'
-          + '   {someCondition && console.log(\'test\')}'
-          + '      <Text style={"center"} content={"TEST_TITLE"}>{"Hello, world!"}</Text>\n'
-          + '      <View><Text>{"Another Text"}</Text></View>\n'
-          + '      {120}\n'
-          + '    </View>\n'
-          + '    );\n'
-          + '  }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View>\n'
+        + '   {someCondition && console.log(\'test\')}'
+        + '      <Text style={"center"} content={"TEST_TITLE"}>{"Hello, world!"}</Text>\n'
+        + '      <View><Text>{"Another Text"}</Text></View>\n'
+        + '      {120}\n'
+        + '    </View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       const extractedStrings = parser.extractStrings(originalFileContentWithAContentProp);
@@ -390,71 +426,71 @@ describe('Extract And Replace Script', () => {
 
     it('should retrieve texts inside placeholder/tip/erromessage prop', () => {
       const originalFileContentWithAPlaceholderProp = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return (\n'
-          + '    <View>\n'
-          + '   {someCondition && console.log(\'test\')}'
-          + '      <Text style={"center"} placeholder={"TEST_PLACEHOLDER"}>{"Hello, world!"}</Text>\n'
-          + '      <Text style={"center"} tip={"TEST_tip"}>{"Hello, world!"}</Text>\n'
-          + '      <Text style={"center"} errormessage={"TEST_errormessage"}>{"Hello, world!"}</Text>\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View>\n'
+        + '   {someCondition && console.log(\'test\')}'
+        + '      <Text style={"center"} placeholder={"TEST_PLACEHOLDER"}>{"Hello, world!"}</Text>\n'
+        + '      <Text style={"center"} tip={"TEST_tip"}>{"Hello, world!"}</Text>\n'
+        + '      <Text style={"center"} errormessage={"TEST_errormessage"}>{"Hello, world!"}</Text>\n'
 
-          + '      <View><Text>{"Another Text"}</Text></View>\n'
-          + '      {120}\n'
-          + '    </View>\n'
-          + '    );\n'
-          + '  }\n'
-          + '}';
+        + '      <View><Text>{"Another Text"}</Text></View>\n'
+        + '      {120}\n'
+        + '    </View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       const extractedStrings = parser.extractStrings(originalFileContentWithAPlaceholderProp);
 
       expect(extractedStrings).to.deep.contain({
-        path: 'program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression',
-        type: 'JSXAttribute',
-        value: 'TEST_PLACEHOLDER',
-      },
-      {
-        path: 'program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression',
-        type: 'JSXAttribute',
-        value: 'TEST_tip',
-      }, {
-        path: 'program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression',
-        type: 'JSXAttribute',
-        value: 'TEST_errormessage',
-      });
+          path: 'program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression',
+          type: 'JSXAttribute',
+          value: 'TEST_PLACEHOLDER',
+        },
+        {
+          path: 'program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression',
+          type: 'JSXAttribute',
+          value: 'TEST_tip',
+        }, {
+          path: 'program.body.1.body.body.0.body.body.0.argument.children.3.openingElement.attributes.1.expression',
+          type: 'JSXAttribute',
+          value: 'TEST_errormessage',
+        });
     });
 
 
     it('should replace texts inside title prop with an expression', () => {
       const originalFileContentWithATitleProp = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return (\n'
-          + '    <View>\n'
-          + '   {someCondition && this.someCommand}\n'
-          + '      <Text style={"center"} title={"TEST_TITLE"}>{"Hello, world!"}</Text>\n'
-          + '      <View><Text>{"Another Text"}</Text></View>\n'
-          + '      {120}\n'
-          + '    </View>\n'
-          + '    );\n'
-          + '  }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View>\n'
+        + '   {someCondition && this.someCommand}\n'
+        + '      <Text style={"center"} title={"TEST_TITLE"}>{"Hello, world!"}</Text>\n'
+        + '      <View><Text>{"Another Text"}</Text></View>\n'
+        + '      {120}\n'
+        + '    </View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
 
       fs.writeFileSync('TestScreen.js', originalFileContentWithATitleProp);
 
       const expectedFileContent = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return <View>\n'
-          + '   {someCondition && this.someCommand}\n'
-          + '      <Text style={"center"} title={I18n.t("TestScreen.JSXAttribute.index(0)")}>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>\n'
-          + '      <View><Text>{I18n.t("TestScreen.JSXExpressionContainer.index(1)")}</Text></View>\n'
-          + '      {120}\n'
-          + '    </View>;\n'
-          + '  }\n\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return <View>\n'
+        + '   {someCondition && this.someCommand}\n'
+        + '      <Text style={"center"} title={I18n.t("TestScreen.JSXAttribute.index(0)")}>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>\n'
+        + '      <View><Text>{I18n.t("TestScreen.JSXExpressionContainer.index(1)")}</Text></View>\n'
+        + '      {120}\n'
+        + '    </View>;\n'
+        + '  }\n\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       parser.replaceStringsWithKeys(
@@ -468,33 +504,33 @@ describe('Extract And Replace Script', () => {
 
     it('should replace texts inside title prop without an expression', () => {
       const originalFileContentWithATitleProp = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return (\n'
-          + '    <View>\n'
-          + '   {someCondition && this.someCommand}\n'
-          + '      <Text style={"center"} title="TEST_TITLE">{"Hello, world!"}</Text>\n'
-          + '      <View><Text>{"Another Text"}</Text></View>\n'
-          + '      {120}\n'
-          + '    </View>\n'
-          + '    );\n'
-          + '  }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View>\n'
+        + '   {someCondition && this.someCommand}\n'
+        + '      <Text style={"center"} title="TEST_TITLE">{"Hello, world!"}</Text>\n'
+        + '      <View><Text>{"Another Text"}</Text></View>\n'
+        + '      {120}\n'
+        + '    </View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
 
       fs.writeFileSync('TestScreen.js', originalFileContentWithATitleProp);
 
       const expectedFileContent = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return <View>\n'
-          + '   {someCondition && this.someCommand}\n'
-          + '      <Text style={"center"} title={I18n.t("TestScreen.JSXAttribute.index(0)")}>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>\n'
-          + '      <View><Text>{I18n.t("TestScreen.JSXExpressionContainer.index(1)")}</Text></View>\n'
-          + '      {120}\n'
-          + '    </View>;\n'
-          + '  }\n\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return <View>\n'
+        + '   {someCondition && this.someCommand}\n'
+        + '      <Text style={"center"} title={I18n.t("TestScreen.JSXAttribute.index(0)")}>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>\n'
+        + '      <View><Text>{I18n.t("TestScreen.JSXExpressionContainer.index(1)")}</Text></View>\n'
+        + '      {120}\n'
+        + '    </View>;\n'
+        + '  }\n\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       parser.replaceStringsWithKeys(
@@ -508,34 +544,34 @@ describe('Extract And Replace Script', () => {
 
     it('should replace texts inside an interpolated string', () => {
       const originalFileContentWithATitleProp = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return (\n'
-          + '    <View>\n'
-          + '   {someCondition && this.someCommand}\n'
-          + '      <Text style={"center"} title={`Hey ${Omar} We Love you`}>{"Hello, world!"}</Text>\n'
-          + '      <View><Text>{"Another Text"}</Text></View>\n'
-          + '      {120}\n'
-          + '    </View>\n'
-          + '    );\n'
-          + '  }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View>\n'
+        + '   {someCondition && this.someCommand}\n'
+        + '      <Text style={"center"} title={`Hey ${Omar} We Love you`}>{"Hello, world!"}</Text>\n'
+        + '      <View><Text>{"Another Text"}</Text></View>\n'
+        + '      {120}\n'
+        + '    </View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
 
       fs.writeFileSync('TestScreen.js', originalFileContentWithATitleProp);
 
       const expectedFileContent = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return <View>\n'
-          + '   {someCondition && this.someCommand}\n'
-          + '      <Text style={"center"} '
-          + 'title={`${I18n.t("TestScreen.TemplateElement.index(0)")}${Omar}${I18n.t("TestScreen.TemplateElement.index(1)")}`}>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>\n'
-          + '      <View><Text>{I18n.t("TestScreen.JSXExpressionContainer.index(1)")}</Text></View>\n'
-          + '      {120}\n'
-          + '    </View>;\n'
-          + '  }\n\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return <View>\n'
+        + '   {someCondition && this.someCommand}\n'
+        + '      <Text style={"center"} '
+        + 'title={`${I18n.t("TestScreen.TemplateElement.index(0)")}${Omar}${I18n.t("TestScreen.TemplateElement.index(1)")}`}>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>\n'
+        + '      <View><Text>{I18n.t("TestScreen.JSXExpressionContainer.index(1)")}</Text></View>\n'
+        + '      {120}\n'
+        + '    </View>;\n'
+        + '  }\n\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       parser.replaceStringsWithKeys(
@@ -549,16 +585,16 @@ describe('Extract And Replace Script', () => {
 
     it('should not throw an exception when faced with an empty expression', () => {
       const originalFileContentWithASelfClosingElement = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return (\n'
-          + '    <View>\n'
-          + '       {" "}\n'
-          + '    </View>\n'
-          + '    );\n'
-          + '  }\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View>\n'
+        + '       {" "}\n'
+        + '    </View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       expect(() => {
@@ -572,25 +608,25 @@ describe('Extract And Replace Script', () => {
 
     it('should replace texts inside conditional statement', () => {
       const originalFileContentWithATitleProp = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  someObject = someCondition ? [\'consequent text\'] : [\'alternate text\'];'
-          + '  render() {\n'
-          + '    return (\n'
-          + '    <View></View>\n'
-          + '    );\n'
-          + '  }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  someObject = someCondition ? [\'consequent text\'] : [\'alternate text\'];'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View></View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
 
       fs.writeFileSync('TestScreen.js', originalFileContentWithATitleProp);
 
       const expectedFileContent = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  someObject = someCondition ? [I18n.t("TestScreen.ConditionalExpression.index(0)")] : [I18n.t("TestScreen.ConditionalExpression.index(1)")];\n\n'
-          + '  render() {\n'
-          + '    return <View></View>;\n'
-          + '  }\n\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  someObject = someCondition ? [I18n.t("TestScreen.ConditionalExpression.index(0)")] : [I18n.t("TestScreen.ConditionalExpression.index(1)")];\n\n'
+        + '  render() {\n'
+        + '    return <View></View>;\n'
+        + '  }\n\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       parser.replaceStringsWithKeys(
@@ -604,11 +640,11 @@ describe('Extract And Replace Script', () => {
 
     it('should not replace texts inside require statement', () => {
       const originalFileContentWithARequireStatement = 'import React from "react";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return <Image source={fillLeftFoot ? require("../../../assets/feet/left-foot-solid-full.png") : require("../../../assets/feet/left-foot-solid-empty.png")} />;\n'
-          + '  }\n\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return <Image source={fillLeftFoot ? require("../../../assets/feet/left-foot-solid-full.png") : require("../../../assets/feet/left-foot-solid-empty.png")} />;\n'
+        + '  }\n\n'
+        + '}';
 
       fs.writeFileSync('output/TestScreen.js', originalFileContentWithARequireStatement);
       fs.writeFileSync(jsonTestFileName, '{}');
@@ -624,22 +660,22 @@ describe('Extract And Replace Script', () => {
 
     it('should replace title attribute inside object statement', () => {
       const originalFileContentWithAnAttributeInsideObject = 'import React from "react";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '   this.MODAL_CONTENT = {\n'
-          + '       title: "Friendly Shapa reminder"\n'
-          + '  }\n'
-          + ' }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '   this.MODAL_CONTENT = {\n'
+        + '       title: "Friendly Shapa reminder"\n'
+        + '  }\n'
+        + ' }\n'
+        + '}';
       const expectedFileContentWithAnAttributeInsideObject = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    this.MODAL_CONTENT = {\n'
-          + '      title: I18n.t("TestScreen.ObjectProperty.index(0)")\n'
-          + '    };\n'
-          + '  }\n\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    this.MODAL_CONTENT = {\n'
+        + '      title: I18n.t("TestScreen.ObjectProperty.index(0)")\n'
+        + '    };\n'
+        + '  }\n\n'
+        + '}';
 
       fs.writeFileSync('TestScreen.js', originalFileContentWithAnAttributeInsideObject);
       fs.writeFileSync(jsonTestFileName, '{}');
@@ -654,14 +690,14 @@ describe('Extract And Replace Script', () => {
 
     it('should not replace style values', () => {
       const fileContentWithStyleValues = 'import React from "react";\n'
-          + 'const styles = StyleSheet.create({\n'
-          + '  button: {\n'
-          + '    justifyContent: "center"\n'
-          + '  }\n'
-          + '});\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {}\n\n'
-          + '}';
+        + 'const styles = StyleSheet.create({\n'
+        + '  button: {\n'
+        + '    justifyContent: "center"\n'
+        + '  }\n'
+        + '});\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {}\n\n'
+        + '}';
 
       fs.writeFileSync('output/TestScreen.js', fileContentWithStyleValues);
       fs.writeFileSync(jsonTestFileName, '{}');
@@ -673,37 +709,37 @@ describe('Extract And Replace Script', () => {
 
     it('should replace texts inside state assignment statement', () => {
       const originalFileContentWithAStateAssignment = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n\n'
-          + '  constructor() {\n'
-          + '    this.state = {\n'
-          + '      errors: {\n'
-          + '        password: \'Some cool test string\'\n'
-          + '      }\n'
-          + '    }\n'
-          + '  }\n\n'
-          + '  render() {\n'
-          + '    return (\n'
-          + '    <View></View>\n'
-          + '    );\n'
-          + '  }\n\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n\n'
+        + '  constructor() {\n'
+        + '    this.state = {\n'
+        + '      errors: {\n'
+        + '        password: \'Some cool test string\'\n'
+        + '      }\n'
+        + '    }\n'
+        + '  }\n\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View></View>\n'
+        + '    );\n'
+        + '  }\n\n'
+        + '}';
 
       fs.writeFileSync('TestScreen.js', originalFileContentWithAStateAssignment);
 
       const expectedFileContent = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  constructor() {\n'
-          + '    this.state = {\n'
-          + '      errors: {\n'
-          + '        password: I18n.t("TestScreen.ObjectProperty.index(0)")\n'
-          + '      }\n'
-          + '    };\n'
-          + '  }\n\n'
-          + '  render() {\n'
-          + '    return <View></View>;\n'
-          + '  }\n\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  constructor() {\n'
+        + '    this.state = {\n'
+        + '      errors: {\n'
+        + '        password: I18n.t("TestScreen.ObjectProperty.index(0)")\n'
+        + '      }\n'
+        + '    };\n'
+        + '  }\n\n'
+        + '  render() {\n'
+        + '    return <View></View>;\n'
+        + '  }\n\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       parser.replaceStringsWithKeys(
@@ -717,12 +753,12 @@ describe('Extract And Replace Script', () => {
 
     it('should ignore text in dimensions function call ', () => {
       const fileContentWithDimensionFunction = 'import React from "react";\n'
-          + 'const width = Dimensions.get("window");\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return <View></View>;\n'
-          + '  }\n\n'
-          + '}';
+        + 'const width = Dimensions.get("window");\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return <View></View>;\n'
+        + '  }\n\n'
+        + '}';
 
       fs.writeFileSync('output/TestScreen.js', fileContentWithDimensionFunction);
       fs.writeFileSync(jsonTestFileName, '{}');
@@ -739,27 +775,27 @@ describe('Extract And Replace Script', () => {
     it('should ignore text in emoji function call ', () => {
       fs.writeFileSync(jsonTestFileName, '{}');
       const fileContentWithIgnoredCases = 'import React from "react";\n'
-          + 'const ignoredCase1 = StyleSheet.get("smiley");\n'
-          + 'const ignoredCase2 = Dimensions.get("smiley");\n'
-          + 'const ignoredCase3 = emoji.get("smiley");\n'
-          + 'const ignoredCase4 = object.setDrawerEnabled("smiley");\n'
-          + 'const ignoredCase5 = OS.get("smiley");\n'
-          + 'const ignoredCase6 = moment.get("smiley");\n'
-          + 'const ignoredCase7 = utcMoment.get("smiley");\n'
-          + 'const ignoredCase8 = OS.handleChangedInput("string");\n'
-          + 'const ignoredCase9 = OS.addEventListener("string");\n'
-          + 'const ignoredCase10 = OS.removeEventListener("string");\n'
-          + 'const ignoredCase11 = OS.PropTypes("string");\n\n'
-          + 'const aComponent = () => {\n'
-          + '  <View style={{\n'
-          + '    color: "white"\n'
-          + '  }}></View>;\n'
-          + '};\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return <View>{config.someCondition === "text" && <Text></Text>}</View>;\n'
-          + '  }\n\n'
-          + '}';
+        + 'const ignoredCase1 = StyleSheet.get("smiley");\n'
+        + 'const ignoredCase2 = Dimensions.get("smiley");\n'
+        + 'const ignoredCase3 = emoji.get("smiley");\n'
+        + 'const ignoredCase4 = object.setDrawerEnabled("smiley");\n'
+        + 'const ignoredCase5 = OS.get("smiley");\n'
+        + 'const ignoredCase6 = moment.get("smiley");\n'
+        + 'const ignoredCase7 = utcMoment.get("smiley");\n'
+        + 'const ignoredCase8 = OS.handleChangedInput("string");\n'
+        + 'const ignoredCase9 = OS.addEventListener("string");\n'
+        + 'const ignoredCase10 = OS.removeEventListener("string");\n'
+        + 'const ignoredCase11 = OS.PropTypes("string");\n\n'
+        + 'const aComponent = () => {\n'
+        + '  <View style={{\n'
+        + '    color: "white"\n'
+        + '  }}></View>;\n'
+        + '};\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return <View>{config.someCondition === "text" && <Text></Text>}</View>;\n'
+        + '  }\n\n'
+        + '}';
 
       fs.writeFileSync('output/TestScreen.js', fileContentWithIgnoredCases);
 
@@ -776,14 +812,14 @@ describe('Extract And Replace Script', () => {
     it('should ignore text in flexDirection style call ', () => {
       fs.writeFileSync(jsonTestFileName, '{}');
       const fileContentWithIgnoredCases = 'import React from "react";\n'
-          + '<View style={{\n'
-          + '  color: "white"\n'
-          + '}}></View>;\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    const flexDirection = mission.status === "RECOMMENDED" || mission.status === "SKIPPED" ? "text1" : "text2";\n'
-          + '  }\n\n'
-          + '}';
+        + '<View style={{\n'
+        + '  color: "white"\n'
+        + '}}></View>;\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    const flexDirection = mission.status === "RECOMMENDED" || mission.status === "SKIPPED" ? "text1" : "text2";\n'
+        + '  }\n\n'
+        + '}';
 
       fs.writeFileSync('output/TestScreen.js', fileContentWithIgnoredCases);
 
@@ -798,26 +834,26 @@ describe('Extract And Replace Script', () => {
     });
     it('should replace text in object declaration in side variable declaration ', () => {
       const originalfileContentWithVariableDeclaration = 'import React from "react";\n'
-          + 'const darkGrayCopyOptions = [{\n'
-          + '  A: "Small steps can get a revolution started!",\n'
-          + '  B: "Starting with your mission today:"\n'
-          + '}];\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return <View></View>;\n'
-          + '  }\n\n'
-          + '}';
+        + 'const darkGrayCopyOptions = [{\n'
+        + '  A: "Small steps can get a revolution started!",\n'
+        + '  B: "Starting with your mission today:"\n'
+        + '}];\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return <View></View>;\n'
+        + '  }\n\n'
+        + '}';
       const expectedfileContentWithVariableDeclaration = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'const darkGrayCopyOptions = [{\n'
-          + '  A: I18n.t("TestScreen.ObjectProperty.index(0)"),\n'
-          + '  B: I18n.t("TestScreen.ObjectProperty.index(1)")\n'
-          + '}];\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return <View></View>;\n'
-          + '  }\n\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'const darkGrayCopyOptions = [{\n'
+        + '  A: I18n.t("TestScreen.ObjectProperty.index(0)"),\n'
+        + '  B: I18n.t("TestScreen.ObjectProperty.index(1)")\n'
+        + '}];\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return <View></View>;\n'
+        + '  }\n\n'
+        + '}';
 
       fs.writeFileSync('TestScreen.js', originalfileContentWithVariableDeclaration);
       fs.writeFileSync(jsonTestFileName, '{}');
@@ -833,23 +869,23 @@ describe('Extract And Replace Script', () => {
 
     it('should replace text in array declaration in side variable declaration ', () => {
       const originalfileContentWithVariableDeclaration = 'import React from "react";\n\n'
-          + 'const firstCalibrationPhrases = ["Connecting your Shapa to your phone", "Measuring your weight"];\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '   return <View></View>;\n'
-          + '  }\n\n'
-          + '}';
+        + 'const firstCalibrationPhrases = ["Connecting your Shapa to your phone", "Measuring your weight"];\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '   return <View></View>;\n'
+        + '  }\n\n'
+        + '}';
       const expectedfileContentWithVariableDeclaration = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'const firstCalibrationPhrases = ['
-          + 'I18n.t("TestScreen.ObjectProperty.index(0)"),'
-          + ' I18n.t("TestScreen.ObjectProperty.index(1)")'
-          + '];\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return <View></View>;\n'
-          + '  }\n\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'const firstCalibrationPhrases = ['
+        + 'I18n.t("TestScreen.ObjectProperty.index(0)"),'
+        + ' I18n.t("TestScreen.ObjectProperty.index(1)")'
+        + '];\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return <View></View>;\n'
+        + '  }\n\n'
+        + '}';
 
       fs.writeFileSync('TestScreen.js', originalfileContentWithVariableDeclaration);
       fs.writeFileSync(jsonTestFileName, '{}');
@@ -865,27 +901,27 @@ describe('Extract And Replace Script', () => {
 
     it('should put an evaluation curly bracket on an attributes value if it is inside a greater expression', () => {
       const originalFileContentWithATitleProp = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return (\n'
-          + '    <View>\n'
-          + '     {anotherCondition && <Text style={"center"} title="TEST_TITLE">{"Hello, world!"}</Text> }\n'
-          + '      {120}\n'
-          + '    </View>\n'
-          + '    );\n'
-          + '  }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View>\n'
+        + '     {anotherCondition && <Text style={"center"} title="TEST_TITLE">{"Hello, world!"}</Text> }\n'
+        + '      {120}\n'
+        + '    </View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
 
       const expectedFileContent = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return <View>\n'
-          + '     {anotherCondition && <Text style={"center"} title={I18n.t("TestScreen.JSXAttribute.index(0)")}>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>}\n'
-          + '      {120}\n'
-          + '    </View>;\n'
-          + '  }\n\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return <View>\n'
+        + '     {anotherCondition && <Text style={"center"} title={I18n.t("TestScreen.JSXAttribute.index(0)")}>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>}\n'
+        + '      {120}\n'
+        + '    </View>;\n'
+        + '  }\n\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       const actualFileContent = parser.replaceStringsWithKeys(
@@ -899,27 +935,27 @@ describe('Extract And Replace Script', () => {
 
     it('should not evaluate inside an evaluation expression', () => {
       const originalFileContentWithATitleProp = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return (\n'
-          + '    <View>\n'
-          + '     {anotherCondition && <Text style={"center"} title={someCondition ? "TEST_TITLE" : "ANOTHER_TITLE"}>{"Hello, world!"}</Text> }\n'
-          + '      {120}\n'
-          + '    </View>\n'
-          + '    );\n'
-          + '  }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View>\n'
+        + '     {anotherCondition && <Text style={"center"} title={someCondition ? "TEST_TITLE" : "ANOTHER_TITLE"}>{"Hello, world!"}</Text> }\n'
+        + '      {120}\n'
+        + '    </View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
 
       const expectedFileContent = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return <View>\n'
-          + '     {anotherCondition && <Text style={"center"} title={someCondition ? I18n.t("TestScreen.JSXAttribute.index(0)") : I18n.t("TestScreen.JSXAttribute.index(1)")}>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>}\n'
-          + '      {120}\n'
-          + '    </View>;\n'
-          + '  }\n\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return <View>\n'
+        + '     {anotherCondition && <Text style={"center"} title={someCondition ? I18n.t("TestScreen.JSXAttribute.index(0)") : I18n.t("TestScreen.JSXAttribute.index(1)")}>{I18n.t("TestScreen.JSXExpressionContainer.index(0)")}</Text>}\n'
+        + '      {120}\n'
+        + '    </View>;\n'
+        + '  }\n\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       const actualFileContent = parser.replaceStringsWithKeys(
@@ -935,19 +971,19 @@ describe('Extract And Replace Script', () => {
     // return `Today and tomorrow, this mission will appear on your calendar at this time:`;
     it('should retrieve literal text in return statement', () => {
       const originalJsWithReturnStatement = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '   return `Today and tomorrow, this mission will appear on your calendar at this time:`;\n'
-          + ' }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '   return `Today and tomorrow, this mission will appear on your calendar at this time:`;\n'
+        + ' }\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
       const expectedFileContent = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return `${I18n.t("TestScreen.TemplateElement.index(0)")}`;\n'
-          + '  }\n\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return `${I18n.t("TestScreen.TemplateElement.index(0)")}`;\n'
+        + '  }\n\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
       const extractedStrings = parser.replaceStringsWithKeys(
         originalJsWithReturnStatement,
@@ -960,19 +996,19 @@ describe('Extract And Replace Script', () => {
 
     it('should retrieve template literal text in return statement', () => {
       const originalJsWithReturnStatement = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '   return `Today and tomorrow, ${this.test}  this mission will appear on your calendar at this time:`;\n'
-          + ' }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '   return `Today and tomorrow, ${this.test}  this mission will appear on your calendar at this time:`;\n'
+        + ' }\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
       const expectedFileContent = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return `${I18n.t("TestScreen.TemplateElement.index(0)")}${this.test}${I18n.t("TestScreen.TemplateElement.index(1)")}`;\n'
-          + '  }\n\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return `${I18n.t("TestScreen.TemplateElement.index(0)")}${this.test}${I18n.t("TestScreen.TemplateElement.index(1)")}`;\n'
+        + '  }\n\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
       const extractedStrings = parser.replaceStringsWithKeys(
         originalJsWithReturnStatement,
@@ -985,19 +1021,19 @@ describe('Extract And Replace Script', () => {
 
     it('should retrieve text in return statement', () => {
       const originalJsWithReturnStatement = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  calculate() {\n'
-          + '   return "Today and tomorrow, this mission will appear on your calendar at this time:";\n'
-          + ' }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  calculate() {\n'
+        + '   return "Today and tomorrow, this mission will appear on your calendar at this time:";\n'
+        + ' }\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
       const expectedFileContent = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  calculate() {\n'
-          + '    return I18n.t("TestScreen.ReturnExpression.index(0)");\n'
-          + '  }\n\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  calculate() {\n'
+        + '    return I18n.t("TestScreen.ReturnExpression.index(0)");\n'
+        + '  }\n\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
       const extractedStrings = parser.replaceStringsWithKeys(
         originalJsWithReturnStatement,
@@ -1010,20 +1046,20 @@ describe('Extract And Replace Script', () => {
 
     it('should not retrieve text in return statement of calculateKeyboardType', () => {
       const originalJsWithReturnStatement = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  calculateKeyboardType() {\n'
-          + '    if (keyRepresentation === "idealWeight")\n'
-          + '      return "Today and tomorrow, this mission will appear on your calendar at this time:";\n'
-          + ' }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  calculateKeyboardType() {\n'
+        + '    if (keyRepresentation === "idealWeight")\n'
+        + '      return "Today and tomorrow, this mission will appear on your calendar at this time:";\n'
+        + ' }\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
       const expectedFileContent = 'import React from "react";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  calculateKeyboardType() {\n'
-          + '    if (keyRepresentation === "idealWeight")\n'
-          + '      return "Today and tomorrow, this mission will appear on your calendar at this time:";\n'
-          + ' }\n'
-          + '}';
+        + 'class TestClass extends React.Component {\n'
+        + '  calculateKeyboardType() {\n'
+        + '    if (keyRepresentation === "idealWeight")\n'
+        + '      return "Today and tomorrow, this mission will appear on your calendar at this time:";\n'
+        + ' }\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
       const extractedStrings = parser.replaceStringsWithKeys(
         originalJsWithReturnStatement,
@@ -1036,18 +1072,18 @@ describe('Extract And Replace Script', () => {
 
     it('should retrieve text without indentation', () => {
       const originalFileContentWithATitleProp = 'import React from "react";\n'
-          + 'import util from "utils";\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return (\n'
-          + '    <View>\n'
-          + '      <Text>\n'
-          + '           Hello, world!\n'
-          + '      </Text>\n'
-          + '    </View>\n'
-          + '    );\n'
-          + '  }\n'
-          + '}';
+        + 'import util from "utils";\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return (\n'
+        + '    <View>\n'
+        + '      <Text>\n'
+        + '           Hello, world!\n'
+        + '      </Text>\n'
+        + '    </View>\n'
+        + '    );\n'
+        + '  }\n'
+        + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
       const extractedStrings = parser.extractStrings(originalFileContentWithATitleProp);
@@ -1061,12 +1097,12 @@ describe('Extract And Replace Script', () => {
 
     it('should not insert an import statement if one already exists', () => {
       const originalFileContent = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  render() {\n'
-          + '    return <Text></Text>;\n'
-          + '  }\n\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  render() {\n'
+        + '    return <Text></Text>;\n'
+        + '  }\n\n'
+        + '}';
 
       fs.writeFileSync('test.json', '{}');
       const actualFileContent = parser.replaceStringsWithKeys(originalFileContent, 'TestScreen.js', 'test.json');
@@ -1075,19 +1111,35 @@ describe('Extract And Replace Script', () => {
 
     it('should not extract text inside an I18n function call', () => {
       const originalFileContent = 'import React from "react";\n'
-          + 'import I18n from "../services/internationalizations/i18n";\n\n'
-          + 'class TestClass extends React.Component {\n'
-          + '  constructor() {\n'
-          + '    return I18n.t("TestScreen.ReturnExpression.index(0)");\n'
-          + '  }\n\n'
-          + '  render() {\n'
-          + '    return <View title={I18n.t("TestScreen.JSXAttribute.index(0)")}></View>\n'
-          + '  }\n\n'
-          + '}';
+        + 'import I18n from "../services/internationalizations/i18n";\n\n'
+        + 'class TestClass extends React.Component {\n'
+        + '  constructor() {\n'
+        + '    return I18n.t("TestScreen.ReturnExpression.index(0)");\n'
+        + '  }\n\n'
+        + '  render() {\n'
+        + '    return <View title={I18n.t("TestScreen.JSXAttribute.index(0)")}></View>\n'
+        + '  }\n\n'
+        + '}';
 
       fs.writeFileSync('test.json', '{}');
-      const actualFileContent = parser.replaceStringsWithKeys(originalFileContent, 'TestScreen.js', 'test.json');
+      let actualFileContent = parser.replaceStringsWithKeys(originalFileContent,
+        'TestScreen.js',
+        'test.json',
+        'output/TestScreen.js',
+        emptyFunction);
+      actualFileContent = parser.writeImportStatementToJSContent(actualFileContent);
       expect(actualFileContent).to.eql(originalFileContent);
+    });
+
+    // TODO test this using file
+    // TODO green this
+    it('should not change file linting', () => {
+      const originalFileContent = parser.readJsFileContent(path.resolve('src/tests/testCase.js'));
+      const expectedFileContent = parser.readJsFileContent(path.resolve('src/tests/expectedTestCase.js'));
+      fs.writeFileSync('test.json', '{}');
+      let returnedFileContent = parser.replaceStringsWithKeys(originalFileContent, 'TestScreen.js', 'test.json', 'src/tests/testCase.js', emptyFunction);
+      returnedFileContent = parser.writeImportStatementToJSContent(returnedFileContent);
+      expect(returnedFileContent).to.eql(expectedFileContent);
     });
   });
 });

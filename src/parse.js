@@ -458,7 +458,23 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
   return opts.processedObject;
 };
 
-exports.writeImportStatementToJsFile = (parsedTree, jsFilePath) => {
+exports.writeImportStatementToJSContent = (jsFileContent) => {
+  if(jsFileContent.includes('import I18n'))
+    return jsFileContent;
+  const fileLines = jsFileContent.split('\n');
+  for (let index = fileLines.length - 1; index >= 0; index -= 1) {
+    if (fileLines[index].startsWith('import')) {
+      fileLines.splice(index + 1, 0, 'import I18n from "../services/internationalizations/i18n";');
+      break;
+    }
+  }
+  const result = fileLines.join('\n');
+  console.log(result);
+  return result;
+};
+
+exports.writeImportStatementToAST = (parsedTree, jsFilePath) => {
+  console.log(typeof jsFilePath);
   const jsFileDirDepth = jsFilePath.substring(jsFilePath.indexOf('src') + 4).split('/').length - 1;
   const i18nPath = `${'../'.repeat(jsFileDirDepth)}services/internationalizations/i18n`;
   babelTraverse.default(parsedTree, {
@@ -562,20 +578,7 @@ const writeToFile = (jsFileName, newFileContent) => {
   fs.writeFileSync(jsFileName, newFileContent.code);
 };
 
-exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFilePath = `output/${jsFileName}`) => {
-  const extractedStrings = exports.extractStrings(fileContent);
-  const extractedStringsWithKeyAndPath = exports.writeToJsonFile(
-    jsonFileName,
-    jsFileName,
-    extractedStrings,
-  );
-  const parsedTree = getParsedTree(fileContent);
-  if (extractedStrings.length) {
-    exports.writeImportStatementToJsFile(parsedTree, jsFilePath);
-  } else {
-    return fileContent;
-  }
-
+function createReplacementCasesHandlers(parsedTree, extractedStringsWithKeyAndPath) {
   const nodeProcessors = {
     parsedTree,
     processedObject: extractedStringsWithKeyAndPath,
@@ -616,11 +619,39 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFileP
       extractedStringsWithKeyAndPath.shift();
     },
   };
+  return nodeProcessors;
+}
+
+function generateNewFileContent(parsedTree, fileContent) {
+  return babelGenerator.default(parsedTree, { sourceMap: true, semicolons: true }, fileContent);
+}
+
+function createNewJSFileFromTree(parsedTree, fileContent, jsFilePath) {
+  const newFileContent = generateNewFileContent(parsedTree, fileContent);
+  writeToFile(jsFilePath, newFileContent);
+  return newFileContent;
+}
+
+exports.replaceStringsWithKeys = (fileContent,
+  jsFileName,
+  jsonFileName,
+  jsFilePath = `output/${jsFileName}`,
+  writeImportStatement = exports.writeImportStatementToAST) => {
+  const extractedStrings = exports.extractStrings(fileContent);
+  const extractedStringsWithKeyAndPath = exports.writeToJsonFile(
+    jsonFileName,
+    jsFileName,
+    extractedStrings,
+  );
+  const parsedTree = getParsedTree(fileContent);
+  if (!extractedStrings.length) {
+    return fileContent;
+  }
+  const nodeProcessors = createReplacementCasesHandlers(parsedTree, extractedStringsWithKeyAndPath);
 
   traverseAndProcessAbstractSyntaxTree(fileContent, nodeProcessors);
-
-  const newFileContent = babelGenerator.default(parsedTree, { sourceMap: true }, fileContent);
-  writeToFile(jsFilePath, newFileContent);
+  writeImportStatement(parsedTree, jsFilePath);
+  const newFileContent = createNewJSFileFromTree(parsedTree, fileContent, jsFilePath);
   return newFileContent.code;
 };
 
