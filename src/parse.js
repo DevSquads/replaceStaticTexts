@@ -469,12 +469,10 @@ exports.writeImportStatementToJSContent = (jsFileContent) => {
     }
   }
   const result = fileLines.join('\n');
-  console.log(result);
   return result;
 };
 
 exports.writeImportStatementToAST = (parsedTree, jsFilePath) => {
-  console.log(typeof jsFilePath);
   const jsFileDirDepth = jsFilePath.substring(jsFilePath.indexOf('src') + 4).split('/').length - 1;
   const i18nPath = `${'../'.repeat(jsFileDirDepth)}services/internationalizations/i18n`;
   babelTraverse.default(parsedTree, {

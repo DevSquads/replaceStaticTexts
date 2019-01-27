@@ -5,3 +5,6 @@ node_modules
 output
 en.json
 TestScreen.js
+.history
+test-results.xml
+output-tree.json
