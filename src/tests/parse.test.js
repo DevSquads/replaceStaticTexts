@@ -1198,5 +1198,24 @@ describe('Extract And Replace Script', () => {
 
       expect(returnedFileContent).to.eql(originalFileContent);
     });
+
+    it('should not change location of comments', () => {
+      const originalFileContent = 'import {VERSION_NUMBERS} from "../../../constants";\n'
+        + '\n'
+        + ' // Actions\n'
+        + 'import { updateBadgeInfo } from "../../../actions/badgeActions";\n'
+        + '\n'
+        + ' // Components\n'
+        + 'import { TestComponent } from "../../../src/TestComponent";';
+      fs.writeFileSync('test.json', '{}');
+
+      const returnedFileContent = parser.replaceStringsWithKeys(
+        originalFileContent,
+        'TestScreen.js',
+        'test.json',
+      );
+
+      expect(returnedFileContent).to.eql(originalFileContent);
+    });
   });
 });
