@@ -459,8 +459,9 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
 };
 
 exports.writeImportStatementToJSContent = (jsFileContent) => {
-  if(jsFileContent.includes('import I18n'))
+  if (jsFileContent.includes('import I18n')) {
     return jsFileContent;
+  }
   const fileLines = jsFileContent.split('\n');
   for (let index = fileLines.length - 1; index >= 0; index -= 1) {
     if (fileLines[index].startsWith('import')) {
