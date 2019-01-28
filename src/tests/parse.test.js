@@ -8,7 +8,7 @@ const path = require('path');
 const parser = require('../parse');
 
 const emptyFunction = (parsedTree, jsFilePath) => {
-  console.log(`this is an empty function with parameters = (${parsedTree}, ${jsFilePath}`);
+  console.log(`this is an empty function with parameters = (${parsedTree}, ${jsFilePath}`); // eslint-disable-line
 };
 
 describe('Extract And Replace Script', () => {

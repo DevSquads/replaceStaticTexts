@@ -1,3 +1,5 @@
+/* eslint-disable */
+
 import React from "react";
 class TestClass extends React.Component {
   render() {
