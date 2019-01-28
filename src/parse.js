@@ -622,7 +622,7 @@ function createReplacementCasesHandlers(parsedTree, extractedStringsWithKeyAndPa
 }
 
 function generateNewFileContent(parsedTree, fileContent) {
-  return babelGenerator.default(parsedTree, { sourceMap: true, semicolons: true }, fileContent);
+  return babelGenerator.default(parsedTree, { sourceMap: true }, fileContent);
 }
 
 function createNewJSFileFromTree(parsedTree, fileContent, jsFilePath) {
@@ -631,11 +631,7 @@ function createNewJSFileFromTree(parsedTree, fileContent, jsFilePath) {
   return newFileContent;
 }
 
-exports.replaceStringsWithKeys = (fileContent,
-  jsFileName,
-  jsonFileName,
-  jsFilePath = `output/${jsFileName}`,
-  writeImportStatement = exports.writeImportStatementToAST) => {
+exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFilePath = `output/${jsFileName}`, writeImportStatement = exports.writeImportStatementToAST) => {
   const extractedStrings = exports.extractStrings(fileContent);
   const extractedStringsWithKeyAndPath = exports.writeToJsonFile(
     jsonFileName,
