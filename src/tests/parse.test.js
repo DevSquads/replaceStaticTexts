@@ -1120,14 +1120,15 @@ describe('Extract And Replace Script', () => {
         + '    return <View title={I18n.t("TestScreen.JSXAttribute.index(0)")}></View>\n'
         + '  }\n\n'
         + '}';
-
       fs.writeFileSync('test.json', '{}');
+
       let actualFileContent = parser.replaceStringsWithKeys(originalFileContent,
         'TestScreen.js',
         'test.json',
         'output/TestScreen.js',
         emptyFunction);
       actualFileContent = parser.writeImportStatementToJSContent(actualFileContent);
+
       expect(actualFileContent).to.eql(originalFileContent);
     });
 
@@ -1135,8 +1136,28 @@ describe('Extract And Replace Script', () => {
       const originalFileContent = parser.readJsFileContent(path.resolve('src/tests/testCase.js'));
       const expectedFileContent = parser.readJsFileContent(path.resolve('src/tests/expectedTestCase.js'));
       fs.writeFileSync('test.json', '{}');
+
       let returnedFileContent = parser.replaceStringsWithKeys(originalFileContent, 'TestScreen.js', 'test.json', 'src/tests/testCase.js', emptyFunction);
       returnedFileContent = parser.writeImportStatementToJSContent(returnedFileContent);
+
+      expect(returnedFileContent).to.eql(expectedFileContent);
+    });
+
+    it('should not change function parentheses location', () => {
+      const originalFileContent = 'if (options.switchToTab) {\n'
+        + '    this.setState({\n'
+        + '        forceTab: options.switchToTab\n'
+        + '    });\n'
+        + '}';
+      const expectedFileContent = 'if (options.switchToTab) {\n'
+        + '    this.setState({\n'
+        + '        forceTab: options.switchToTab\n'
+        + '    });\n'
+        + '}';
+      fs.writeFileSync('test.json', '{}');
+
+      const returnedFileContent = parser.replaceStringsWithKeys(originalFileContent, 'TestScreen.js', 'test.json');
+
       expect(returnedFileContent).to.eql(expectedFileContent);
     });
   });
