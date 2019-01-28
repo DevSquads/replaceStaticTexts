@@ -23,7 +23,7 @@ The following is a set of guidelines for contributing to [PROJECT NAME]. These a
 
 ## Code of Conduct
 
-This project and everyone participating in it is governed by the [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [E-Mail](mailto:atom@github.com).
+This project and everyone participating in it is governed by the [Code of Conduct](CODE_OF_CONDUCT). By participating, you are expected to uphold this code. Please report unacceptable behavior to E-Mail [WILL BE A VALID TEAM MAIL ADDRESS].
 
 
 ## What should I know before I get started?
@@ -103,7 +103,7 @@ While the prerequisites above must be satisfied prior to having your pull reques
 
 ### JavaScript Styleguide
 
-All JavaScript must adhere to [JavaScript Standard Style](https://standardjs.com/).
+All JavaScript must adhere to [Airbnb Style](https://github.com/airbnb/javascript).
 
 * Prefer the object spread operator (`{...anotherObj}`) to `Object.assign()`
 * Inline `export`s with expressions whenever possible
