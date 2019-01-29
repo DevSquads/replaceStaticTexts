@@ -473,39 +473,6 @@ exports.writeImportStatementToJSContent = (jsFileContent) => {
   return result;
 };
 
-exports.writeImportStatementToAST = (parsedTree, jsFilePath) => {
-  const jsFileDirDepth = jsFilePath.substring(jsFilePath.indexOf('src') + 4).split('/').length - 1;
-  const i18nPath = `${'../'.repeat(jsFileDirDepth)}services/internationalizations/i18n`;
-  babelTraverse.default(parsedTree, {
-    Program(path) {
-      let importAlreadyExists = false;
-      path.traverse({
-        ImportDeclaration(path) {
-          if (path.node.specifiers[0].local.name === 'I18n') {
-            importAlreadyExists = true;
-          }
-        },
-      });
-      if (importAlreadyExists) {
-        return;
-      }
-      let lastImport = path.get('body').filter(p => p.isImportDeclaration()).pop();
-      const identifier = babelTypes.identifier('I18n');
-      const importDefaultSpecifier = babelTypes.importDefaultSpecifier(identifier);
-      const importDeclaration = babelTypes.importDeclaration(
-        [importDefaultSpecifier],
-        babelTypes.stringLiteral(i18nPath),
-      );
-
-      if (lastImport) {
-        lastImport.insertAfter(importDeclaration);
-        lastImport = path.get('body').filter(p => p.isImportDeclaration()).pop();
-        lastImport.insertAfter(babelTypes.jsxEmptyExpression());
-      }
-    },
-  });
-};
-
 const getParsedTree = (jsFileContent) => {
   const parseTree = babelParser.parse(jsFileContent, {
     presets: ['@babel/preset-react'],
@@ -631,7 +598,7 @@ function createNewJSFileFromTree(parsedTree, fileContent, jsFilePath) {
   return newFileContent;
 }
 
-exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFilePath = `output/${jsFileName}`, writeImportStatement = exports.writeImportStatementToAST) => {
+exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFilePath = `output/${jsFileName}`) => {
   const extractedStrings = exports.extractStrings(fileContent);
   const extractedStringsWithKeyAndPath = exports.writeToJsonFile(
     jsonFileName,
@@ -645,7 +612,6 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFileP
   const nodeProcessors = createReplacementCasesHandlers(parsedTree, extractedStringsWithKeyAndPath);
 
   traverseAndProcessAbstractSyntaxTree(fileContent, nodeProcessors);
-  writeImportStatement(parsedTree, jsFilePath);
   const newFileContent = createNewJSFileFromTree(parsedTree, fileContent, jsFilePath);
   return newFileContent.code;
 };
