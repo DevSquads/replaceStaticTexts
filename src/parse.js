@@ -692,16 +692,3 @@ exports.cleanUpExtractedString = (extractedString) => {
   }
   return extractedString.replace(/[\t\n]+/gm, ' ').trim();
 };
-
-// const walkSync = (dir, filelist) => {
-//   const files = fs.readdirSync(dir);
-//   filelist = filelist || [];
-//   files.forEach((file) => {
-//     if (fs.statSync(`${dir}/${file}`).isDirectory()) {
-//       filelist = walkSync(`${dir}/${file}`, filelist);
-//     } else {
-//       filelist.push(`${dir}/${file}`);
-//     }
-//   });
-//   return filelist;
-// };
