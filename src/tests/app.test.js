@@ -23,7 +23,7 @@ describe('application entry point', () => {
     // run walksync
     const returnedFileList = App.walkSync(dirPath);
     // expect
-    expect(returnedFileList.length).to.eql(2);
+    expect(returnedFileList.length).to.eql(5);
 
     fs.unlinkSync(newFilePath);
     fs.unlinkSync(nonJavascriptFilePath);
