@@ -1,4 +1,4 @@
-# [replaceStaticTexts]
+# [replaceStaticTexts]  [![Build CircleCI](https://circleci.com/gh/DevSquads/replaceStaticTexts/tree/master.svg?style=svg)](https://circleci.com/gh/DevSquads/replaceStaticTexts/tree/master)
 
 ## WELCOME!
 We're so glad you're thinking about contributing to a Devsquads open source project! If you're unsure about anything, just ask -- or submit the issue or pull request anyway. The worst that can happen is you'll be politely asked to change something. We love all friendly contributions.
