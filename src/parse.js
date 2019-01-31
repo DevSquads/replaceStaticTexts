@@ -12,6 +12,8 @@ const CONDITIONAL_EXPRESSION_TYPE = 'ConditionalExpression';
 const OBJECT_PROPERTY_TYPE = 'ObjectProperty';
 const CALL_EXPRESSION_TYPE = 'CallExpression';
 const RETURN_EXPRESSION_TYPE = 'ReturnExpression';
+const Parser = require('./Parser');
+const Traverser = require('./Traverser');
 
 const cleanUpIndentation = extractedText => extractedText.replace(/^\n[\t ]{2,}/gm, '').replace(/\n[\t ]{2,}$/gm, '').replace(/\n[\t ]{2,}/gm, '\n');
 
@@ -404,7 +406,6 @@ const traverseAndProcessAbstractSyntaxTree = (jsFileContent, opts) => {
       }
     },
     Function(path) {
-      // console.log(path);
       if (path.node.key != null
         && (path.node.key.name === 'calculateKeyboardType'
           || path.node.key.name === 'processOutgoingValue'
@@ -481,8 +482,10 @@ const getParsedTree = (jsFileContent) => {
 };
 
 exports.extractStrings = (jsFileContent) => {
+  const parser = new Parser();
+  parser.jsContent = jsFileContent;
   const nodeProcessors = {
-    parsedTree: getParsedTree(jsFileContent),
+    parsedTree: parser.getParsedTree(jsFileContent),
     processedObject: [],
     jsxTextNodeProcessor(path, extractedStringsWithTypeAndPath) {
       const nodePath = getNodePath(path);
@@ -535,8 +538,9 @@ exports.extractStrings = (jsFileContent) => {
       );
     },
   };
-
-  return traverseAndProcessAbstractSyntaxTree(jsFileContent, nodeProcessors);
+  const traverser = new Traverser(nodeProcessors, {});
+  return traverser.traverseAndProcessAbstractSyntaxTree();
+  // return traverseAndProcessAbstractSyntaxTree(jsFileContent, nodeProcessors);
 };
 
 const writeToFile = (jsFileName, newFileContent) => {
@@ -610,7 +614,10 @@ exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFileP
   }
   const nodeProcessors = createReplacementCasesHandlers(parsedTree, extractedStringsWithKeyAndPath);
 
-  traverseAndProcessAbstractSyntaxTree(fileContent, nodeProcessors);
+  const traverser = new Traverser(nodeProcessors, {});
+  traverser.traverseAndProcessAbstractSyntaxTree();
+
+  // traverseAndProcessAbstractSyntaxTree(fileContent, nodeProcessors);
   const newFileContent = createNewJSFileFromTree(parsedTree, fileContent, jsFilePath);
   return newFileContent.code;
 };
