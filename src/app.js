@@ -28,24 +28,23 @@ module.exports = {
   findAllJSFilesInADirectory,
   applyParseOnDirectory,
 };
-
-function main() {
-  const dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src/utils';
-  if (!fileSystemUtil.existsSync('output')) {
-    fileSystemUtil.mkdirSync('output');
-  }
-  const files = findAllJSFilesInADirectory(dirPath, []);
-
-
-  files.forEach((jsFilePath) => {
-    if (jsFilePath.endsWith('.js') && !jsFilePath.endsWith('LanguageSetting.js') && !jsFilePath.endsWith('App.js') && !jsFilePath.toUpperCase().includes('DEPRECATED')) {
-      const jsFileName = `${jsFilePath.split('/').reverse()[1]}_${jsFilePath.split('/').reverse()[0]}`;
-      const jsonFilePath = './work/en.json';
-      const jsFileContent = exports.readJsFileContent(jsFilePath);
-      console.log(jsFileName);
-      exports.replaceStringsWithKeys(jsFileContent, jsFileName, jsonFilePath, jsFilePath);
-    }
-  });
-}
-
-main();
+//
+// function main() {
+//   const dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src/utils';
+//   if (!fileSystemUtil.existsSync('output')) {
+//     fileSystemUtil.mkdirSync('output');
+//   }
+//   const files = findAllJSFilesInADirectory(dirPath, []);
+//
+//
+//   files.forEach((jsFilePath) => {
+//     if (jsFilePath.endsWith('.js') && !jsFilePath.endsWith('LanguageSetting.js') && !jsFilePath.endsWith('App.js') && !jsFilePath.toUpperCase().includes('DEPRECATED')) {
+//       const jsFileName = `${jsFilePath.split('/').reverse()[1]}_${jsFilePath.split('/').reverse()[0]}`;
+//       const jsonFilePath = './en.json';
+//       const jsFileContent = parser.readJsFileContent(jsFilePath);
+//       parser.replaceStringsWithKeys(jsFileContent, jsFileName, jsonFilePath, jsFilePath);
+//     }
+//   });
+// }
+//
+// main();
