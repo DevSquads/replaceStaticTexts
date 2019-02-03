@@ -1,17 +1,51 @@
 const fileSystemUtil = require('fs');
-const walkSync = (dir, filelist) => {
+const parser = require('./parse');
+
+const findAllJSFilesInADirectory = (dir) => {
   const files = fileSystemUtil.readdirSync(dir);
-  filelist = filelist || [];
+  const fileList = [];
   files.forEach((file) => {
     if (fileSystemUtil.statSync(`${dir}/${file}`).isDirectory()) {
-      filelist = walkSync(`${dir}/${file}`, filelist);
-    } else {
-      filelist.push(`${dir}/${file}`);
+      fileList.push(...findAllJSFilesInADirectory(`${dir}/${file}`));
+    } else if (file.endsWith('.js')) {
+      fileList.push(`${dir}/${file}`);
     }
   });
-  return filelist;
+  return fileList;
+};
+
+const applyParseOnDirectory = (dir, jsonFilePath) => {
+  const filePathList = findAllJSFilesInADirectory(dir);
+
+  filePathList.forEach((filePath) => {
+    const jsFileContent = parser.readJsFileContent(filePath);
+    const jsFileName = `${filePath.split('/').reverse()[1]}_${filePath.split('/').reverse()[0]}`;
+    parser.replaceStringsWithKeys(jsFileContent, jsFileName, jsonFilePath, filePath);
+  });
 };
 
 module.exports = {
-  walkSync,
+  findAllJSFilesInADirectory,
+  applyParseOnDirectory,
 };
+
+function main() {
+  const dirPath = '/Users/omar/Desktop/Work/shapa-react-native/src/utils';
+  if (!fileSystemUtil.existsSync('output')) {
+    fileSystemUtil.mkdirSync('output');
+  }
+  const files = findAllJSFilesInADirectory(dirPath, []);
+
+
+  files.forEach((jsFilePath) => {
+    if (jsFilePath.endsWith('.js') && !jsFilePath.endsWith('LanguageSetting.js') && !jsFilePath.endsWith('App.js') && !jsFilePath.toUpperCase().includes('DEPRECATED')) {
+      const jsFileName = `${jsFilePath.split('/').reverse()[1]}_${jsFilePath.split('/').reverse()[0]}`;
+      const jsonFilePath = './work/en.json';
+      const jsFileContent = exports.readJsFileContent(jsFilePath);
+      console.log(jsFileName);
+      exports.replaceStringsWithKeys(jsFileContent, jsFileName, jsonFilePath, jsFilePath);
+    }
+  });
+}
+
+main();
