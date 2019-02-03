@@ -2,7 +2,6 @@
 const babelParser = require('@babel/core');
 const babelTraverse = require('@babel/traverse');
 const babelGenerator = require('@babel/generator');
-const babelTypes = require('@babel/types');
 const fs = require('fs');
 
 const JSX_TEXT_TYPE = 'JSXText';

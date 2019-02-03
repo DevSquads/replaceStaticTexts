@@ -38,8 +38,11 @@ module.exports = {
 //
 //
 //   files.forEach((jsFilePath) => {
-//     if (jsFilePath.endsWith('.js') && !jsFilePath.endsWith('LanguageSetting.js') && !jsFilePath.endsWith('App.js') && !jsFilePath.toUpperCase().includes('DEPRECATED')) {
-//       const jsFileName = `${jsFilePath.split('/').reverse()[1]}_${jsFilePath.split('/').reverse()[0]}`;
+//     if (jsFilePath.endsWith('.js') &&
+//     !jsFilePath.endsWith('LanguageSetting.js') &&
+//     !jsFilePath.endsWith('App.js') && !jsFilePath.toUpperCase().includes('DEPRECATED')) {
+//       const jsFileName = `${jsFilePath.split('/').reverse()[1]}_${jsFilePath.split('/')
+//       .reverse()[0]}`;
 //       const jsonFilePath = './en.json';
 //       const jsFileContent = parser.readJsFileContent(jsFilePath);
 //       parser.replaceStringsWithKeys(jsFileContent, jsFileName, jsonFilePath, jsFilePath);
