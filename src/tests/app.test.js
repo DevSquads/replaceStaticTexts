@@ -5,7 +5,7 @@
 const expect = require('chai').expect;
 const path = require('path');
 const fs = require('fs');
-const App = require('../app');
+const App = require('../core');
 
 describe('application entry point', () => {
   it('should find the javascript files in directory ', () => {
