@@ -3,15 +3,12 @@
           prefer-destructuring: 0
 */
 
-/*
-TODO: delete the empty function
-TODO: Refactor the expected part of all test
-TODO: Re-design the parser.replace-text function
- */
+
 const expect = require('chai').expect;
 const fs = require('fs');
 const path = require('path');
 const parser = require('../parse');
+const Parser = require('../Parser');
 
 
 describe('Extract And Replace Script', () => {
@@ -105,9 +102,9 @@ describe('Extract And Replace Script', () => {
         JS_TEST_FILE_NAME,
         jsonTestFileName,
       );
-      jsFileContentWithImportStatement = parser
-        .writeImportStatementToJSContent(jsFileContentWithImportStatement);
-
+      const parserObject = new Parser();
+      parserObject.jsContent = jsFileContentWithImportStatement;
+      jsFileContentWithImportStatement = parserObject.writeImportStatementToJSContent();
       expect(jsFileContentWithImportStatement).to.eql(expectedJsFileContent);
     });
 
