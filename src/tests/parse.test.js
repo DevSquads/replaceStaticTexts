@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const parser = require('../parse');
 const Parser = require('../Parser');
+const Traverser = require('../Traverser');
 
 
 describe('Extract And Replace Script', () => {
@@ -24,7 +25,7 @@ describe('Extract And Replace Script', () => {
       + '    );\n'
       + '  }\n'
       + '}';
-
+    const parserObject = new Parser();
     const originalFileContentWithExpressionText = 'import React from "react";\n'
       + 'class TestClass extends React.Component {\n'
       + '  render() {\n'
@@ -102,7 +103,6 @@ describe('Extract And Replace Script', () => {
         JS_TEST_FILE_NAME,
         jsonTestFileName,
       );
-      const parserObject = new Parser();
       parserObject.jsContent = jsFileContentWithImportStatement;
       jsFileContentWithImportStatement = parserObject.writeImportStatementToJSContent();
       expect(jsFileContentWithImportStatement).to.eql(expectedJsFileContent);
@@ -216,8 +216,8 @@ describe('Extract And Replace Script', () => {
         + '  }\n'
         + '}';
 
-      const fileContentWithI18nImportStatement = parser
-        .writeImportStatementToJSContent(originalFileContent);
+      parserObject.jsContent = originalFileContent;
+      const fileContentWithI18nImportStatement = parserObject.writeImportStatementToJSContent();
 
       expect(fileContentWithI18nImportStatement).to.eql(expectedFileContent);
     });
@@ -239,9 +239,8 @@ describe('Extract And Replace Script', () => {
       let jsFileContentWithReplacedKeys = parser
         .replaceStringsWithKeys(originalFileContentWithJSXText,
           JS_TEST_FILE_NAME, jsonTestFileName);
-      jsFileContentWithReplacedKeys = parser
-        .writeImportStatementToJSContent(jsFileContentWithReplacedKeys);
-
+      parserObject.jsContent = jsFileContentWithReplacedKeys;
+      jsFileContentWithReplacedKeys = parserObject.writeImportStatementToJSContent();
       expect(jsFileContentWithReplacedKeys).to.eql(modifiedFileContent);
     });
 
@@ -262,8 +261,8 @@ describe('Extract And Replace Script', () => {
       let jsFileContentWithReplacedKeys = parser
         .replaceStringsWithKeys(originalFileContentWithExpressionText,
           JS_TEST_FILE_NAME, jsonTestFileName);
-      jsFileContentWithReplacedKeys = parser
-        .writeImportStatementToJSContent(jsFileContentWithReplacedKeys);
+      parserObject.jsContent = jsFileContentWithReplacedKeys;
+      jsFileContentWithReplacedKeys = parserObject.writeImportStatementToJSContent();
 
       expect(jsFileContentWithReplacedKeys).to.eql(modifiedFileContent);
     });
@@ -505,8 +504,8 @@ describe('Extract And Replace Script', () => {
       let jsFileContentWithReplacedKeys = parser
         .replaceStringsWithKeys(originalFileContentWithATitleProp,
           JS_TEST_FILE_NAME, jsonTestFileName);
-      jsFileContentWithReplacedKeys = parser
-        .writeImportStatementToJSContent(jsFileContentWithReplacedKeys);
+      parserObject.jsContent = jsFileContentWithReplacedKeys;
+      jsFileContentWithReplacedKeys = parserObject.writeImportStatementToJSContent();
 
       expect(jsFileContentWithReplacedKeys).to.eql(expectedFileContent);
     });
@@ -540,13 +539,13 @@ describe('Extract And Replace Script', () => {
         + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
-      let modifiedFileContentWithKeys = parser
+      let jsFileContentWithReplacedKeys = parser
         .replaceStringsWithKeys(originalFileContentWithATitleProp,
           JS_TEST_FILE_NAME, jsonTestFileName);
-      modifiedFileContentWithKeys = parser
-        .writeImportStatementToJSContent(modifiedFileContentWithKeys);
+      parserObject.jsContent = jsFileContentWithReplacedKeys;
+      jsFileContentWithReplacedKeys = parserObject.writeImportStatementToJSContent();
 
-      expect(modifiedFileContentWithKeys).to.eql(expectedFileContent);
+      expect(jsFileContentWithReplacedKeys).to.eql(expectedFileContent);
     });
 
     it('should replace texts inside an interpolated string', () => {
@@ -579,13 +578,13 @@ describe('Extract And Replace Script', () => {
         + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
-      let modifiedFileContentWithKeys = parser
+      let jsFileContentWithReplacedKeys = parser
         .replaceStringsWithKeys(originalFileContentWithATitleProp,
           JS_TEST_FILE_NAME, jsonTestFileName);
-      modifiedFileContentWithKeys = parser
-        .writeImportStatementToJSContent(modifiedFileContentWithKeys);
+      parserObject.jsContent = jsFileContentWithReplacedKeys;
+      jsFileContentWithReplacedKeys = parserObject.writeImportStatementToJSContent();
 
-      expect(modifiedFileContentWithKeys).to.eql(expectedFileContent);
+      expect(jsFileContentWithReplacedKeys).to.eql(expectedFileContent);
     });
 
     it('should not throw an exception when faced with an empty expression', () => {
@@ -629,13 +628,13 @@ describe('Extract And Replace Script', () => {
         + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
-      let modifiedFileContentWithKeys = parser
+      let jsFileContentWithReplacedKeys = parser
         .replaceStringsWithKeys(originalFileContentWithATitleProp,
           JS_TEST_FILE_NAME, jsonTestFileName);
-      modifiedFileContentWithKeys = parser
-        .writeImportStatementToJSContent(modifiedFileContentWithKeys);
+      parserObject.jsContent = jsFileContentWithReplacedKeys;
+      jsFileContentWithReplacedKeys = parserObject.writeImportStatementToJSContent();
 
-      expect(modifiedFileContentWithKeys).to.eql(expectedFileContent);
+      expect(jsFileContentWithReplacedKeys).to.eql(expectedFileContent);
     });
 
     it('should not replace texts inside require statement', () => {
@@ -676,13 +675,13 @@ describe('Extract And Replace Script', () => {
       fs.writeFileSync(JS_TEST_FILE_NAME, originalFileContentWithAnAttributeInsideObject);
       fs.writeFileSync(jsonTestFileName, '{}');
 
-      let modifiedFileContentWithKeys = parser
+      let jsFileContentWithReplacedKeys = parser
         .replaceStringsWithKeys(originalFileContentWithAnAttributeInsideObject,
           JS_TEST_FILE_NAME, jsonTestFileName);
-      modifiedFileContentWithKeys = parser
-        .writeImportStatementToJSContent(modifiedFileContentWithKeys);
+      parserObject.jsContent = jsFileContentWithReplacedKeys;
+      jsFileContentWithReplacedKeys = parserObject.writeImportStatementToJSContent();
 
-      expect(modifiedFileContentWithKeys).to.eql(expectedFileContentWithAnAttributeInsideObject);
+      expect(jsFileContentWithReplacedKeys).to.eql(expectedFileContentWithAnAttributeInsideObject);
     });
 
     it('should not replace style values', () => {
@@ -738,13 +737,13 @@ describe('Extract And Replace Script', () => {
         + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
 
-      let modifiedFileContentWithKeys = parser
+      let jsFileContentWithReplacedKeys = parser
         .replaceStringsWithKeys(originalFileContentWithAStateAssignment,
           JS_TEST_FILE_NAME, jsonTestFileName);
-      modifiedFileContentWithKeys = parser
-        .writeImportStatementToJSContent(modifiedFileContentWithKeys);
+      parserObject.jsContent = jsFileContentWithReplacedKeys;
+      jsFileContentWithReplacedKeys = parserObject.writeImportStatementToJSContent();
 
-      expect(modifiedFileContentWithKeys).to.eql(expectedFileContent);
+      expect(jsFileContentWithReplacedKeys).to.eql(expectedFileContent);
     });
 
     it('should ignore text in dimensions function call ', () => {
@@ -842,13 +841,13 @@ describe('Extract And Replace Script', () => {
       fs.writeFileSync(JS_TEST_FILE_NAME, originalfileContentWithVariableDeclaration);
       fs.writeFileSync(jsonTestFileName, '{}');
 
-      let modifiedFileContentWithKeys = parser
+      let jsFileContentWithReplacedKeys = parser
         .replaceStringsWithKeys(originalfileContentWithVariableDeclaration,
           JS_TEST_FILE_NAME, jsonTestFileName);
-      modifiedFileContentWithKeys = parser
-        .writeImportStatementToJSContent(modifiedFileContentWithKeys);
+      parserObject.jsContent = jsFileContentWithReplacedKeys;
+      jsFileContentWithReplacedKeys = parserObject.writeImportStatementToJSContent();
 
-      expect(modifiedFileContentWithKeys).to.eql(expectedfileContentWithVariableDeclaration);
+      expect(jsFileContentWithReplacedKeys).to.eql(expectedfileContentWithVariableDeclaration);
     });
 
     it('should replace text in array declaration in side variable declaration ', () => {
@@ -873,13 +872,13 @@ describe('Extract And Replace Script', () => {
       fs.writeFileSync(JS_TEST_FILE_NAME, originalfileContentWithVariableDeclaration);
       fs.writeFileSync(jsonTestFileName, '{}');
 
-      let modifiedFileContentWithArrayOfStrings = parser
+      let jsFileContentWithReplacedKeys = parser
         .replaceStringsWithKeys(originalfileContentWithVariableDeclaration,
           JS_TEST_FILE_NAME, jsonTestFileName);
-      modifiedFileContentWithArrayOfStrings = parser
-        .writeImportStatementToJSContent(modifiedFileContentWithArrayOfStrings);
+      parserObject.jsContent = jsFileContentWithReplacedKeys;
+      jsFileContentWithReplacedKeys = parserObject.writeImportStatementToJSContent();
 
-      expect(modifiedFileContentWithArrayOfStrings)
+      expect(jsFileContentWithReplacedKeys)
         .to.eql(expectedfileContentWithVariableDeclaration);
     });
 
@@ -910,8 +909,8 @@ describe('Extract And Replace Script', () => {
       let modifiedContentWithTextProp = parser
         .replaceStringsWithKeys(originalFileContentWithTextProp,
           JS_TEST_FILE_NAME, jsonTestFileName);
-      modifiedContentWithTextProp = parser
-        .writeImportStatementToJSContent(modifiedContentWithTextProp);
+      parserObject.jsContent = modifiedContentWithTextProp;
+      modifiedContentWithTextProp = parserObject.writeImportStatementToJSContent();
 
       expect(modifiedContentWithTextProp).to.eql(expectedFileContent);
     });
@@ -943,8 +942,8 @@ describe('Extract And Replace Script', () => {
       let modifiedContentWithEvaluationExpression = parser
         .replaceStringsWithKeys(originalFileContentWithATitleProp,
           JS_TEST_FILE_NAME, jsonTestFileName);
-      modifiedContentWithEvaluationExpression = parser
-        .writeImportStatementToJSContent(modifiedContentWithEvaluationExpression);
+      parserObject.jsContent = modifiedContentWithEvaluationExpression;
+      modifiedContentWithEvaluationExpression = parserObject.writeImportStatementToJSContent();
 
       expect(modifiedContentWithEvaluationExpression).to.eql(expectedFileContent);
     });
@@ -971,8 +970,8 @@ describe('Extract And Replace Script', () => {
       let modifiedContentWithLiteralInReturnStatement = parser
         .replaceStringsWithKeys(originalJsWithReturnStatement,
           JS_TEST_FILE_NAME, jsonTestFileName);
-      modifiedContentWithLiteralInReturnStatement = parser
-        .writeImportStatementToJSContent(modifiedContentWithLiteralInReturnStatement);
+      parserObject.jsContent = modifiedContentWithLiteralInReturnStatement;
+      modifiedContentWithLiteralInReturnStatement = parserObject.writeImportStatementToJSContent();
 
       expect(modifiedContentWithLiteralInReturnStatement).to.eql(expectedFileContent);
     });
@@ -997,8 +996,8 @@ describe('Extract And Replace Script', () => {
       let modifiedContentWithLiteralInReturnStatement = parser
         .replaceStringsWithKeys(originalJsWithLiteralInReturnStatement,
           JS_TEST_FILE_NAME, jsonTestFileName);
-      modifiedContentWithLiteralInReturnStatement = parser
-        .writeImportStatementToJSContent(modifiedContentWithLiteralInReturnStatement);
+      parserObject.jsContent = modifiedContentWithLiteralInReturnStatement;
+      modifiedContentWithLiteralInReturnStatement = parserObject.writeImportStatementToJSContent();
 
       expect(modifiedContentWithLiteralInReturnStatement).to.eql(expectedFileContent);
     });
@@ -1023,8 +1022,8 @@ describe('Extract And Replace Script', () => {
       let modifiedFileContentWithReturnStatement = parser
         .replaceStringsWithKeys(originalJsWithReturnStatement,
           JS_TEST_FILE_NAME, jsonTestFileName);
-      modifiedFileContentWithReturnStatement = parser
-        .writeImportStatementToJSContent(modifiedFileContentWithReturnStatement);
+      parserObject.jsContent = modifiedFileContentWithReturnStatement;
+      modifiedFileContentWithReturnStatement = parserObject.writeImportStatementToJSContent();
 
       expect(modifiedFileContentWithReturnStatement).to.eql(expectedFileContent);
     });
@@ -1093,7 +1092,8 @@ describe('Extract And Replace Script', () => {
       let actualFileContent = parser
         .replaceStringsWithKeys(originalFileContent,
           JS_TEST_FILE_NAME, jsonTestFileName);
-      actualFileContent = parser.writeImportStatementToJSContent(actualFileContent);
+      parserObject.jsContent = actualFileContent;
+      actualFileContent = parserObject.writeImportStatementToJSContent();
 
       expect(actualFileContent).to.eql(originalFileContent);
     });
@@ -1115,8 +1115,8 @@ describe('Extract And Replace Script', () => {
       let actualFileContent = parser
         .replaceStringsWithKeys(originalFileContent,
           JS_TEST_FILE_NAME, jsonTestFileName);
-      actualFileContent = parser.writeImportStatementToJSContent(actualFileContent);
-
+      parserObject.jsContent = actualFileContent;
+      actualFileContent = parserObject.writeImportStatementToJSContent();
       expect(actualFileContent).to.eql(originalFileContent);
     });
 
@@ -1126,7 +1126,8 @@ describe('Extract And Replace Script', () => {
       fs.writeFileSync(jsonTestFileName, '{}');
 
       let returnedFileContent = parser.replaceStringsWithKeys(originalFileContent, JS_TEST_FILE_NAME, jsonTestFileName, 'src/tests/testCase.js');
-      returnedFileContent = parser.writeImportStatementToJSContent(returnedFileContent);
+      parserObject.jsContent = returnedFileContent;
+      returnedFileContent = parserObject.writeImportStatementToJSContent();
 
       expect(returnedFileContent).to.eql(expectedFileContent);
     });
