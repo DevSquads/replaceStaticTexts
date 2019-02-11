@@ -1,8 +1,10 @@
 /* eslint no-shadow: 0 no-param-reassign: 0 */
 const babelParser = require('@babel/core');
-const babelTraverse = require('@babel/traverse');
 const babelGenerator = require('@babel/generator');
 const fs = require('fs');
+
+const NodeProcessors = require('./NodeProcessors');
+
 
 const JSX_TEXT_TYPE = 'JSXText';
 const JSX_EXPRESSION_TYPE = 'JSXExpressionContainer';
@@ -23,75 +25,7 @@ const constructStringObject = (textKey, extractedText, stringType) => ({
   value: cleanUpIndentation(extractedText),
 });
 
-const shouldBeIgnored = (path) => {
-  const ignoredPaths = [
-    'StyleSheet',
-    'Dimensions',
-    'emoji',
-    'setDrawerEnabled',
-    'OS',
-    'moment',
-    'utcMoment',
-    'handleChangedInput',
-    'addEventListener',
-    'removeEventListener',
-    'PropTypes',
-    'style',
-    'margin',
-    'position',
-    'display',
-    'color',
-    'orderBy',
-    'format',
-    'editingMode',
-    'config',
-    'loading',
-    'require',
-    'animated',
-    'side',
-    'endOf',
-    'animationType',
-    'backgroundColor',
-    'innerRingColor',
-    'outerRingColor',
-    'outputRange',
-    'playSound',
-    'fontColor',
-    'disableButtons',
-    'inchesIsFocused',
-    'onFormFocus',
-    'onFormBlur',
-    'flexDirection',
-    'logInWithReadPermissions',
-    'mediaType',
-    'layoutType',
-    'set',
-    'get',
-    'add',
-    'pick',
-    'alignSelf',
-    'justifyContent',
-    'alignItems',
-    'generateChoiceSelection',
-    'generateTimeSelection',
-    'localMoment',
-    'I18n',
-    't',
-    'bulletsDirection',
-    'map',
-  ];
-  return ignoredPaths.includes(path.node.name);
-};
-
 const getNodePath = path => path.getPathLocation().replace(/\[([0-9]*)\]/gm, '.$1');
-
-const isVisited = (visitedNodePaths, path) => {
-  if (!visitedNodePaths[getNodePath(path)]) {
-    visitedNodePaths[getNodePath(path)] = true;
-    return false;
-  }
-  return true;
-};
 
 const getStringKey = (fileName, extractedStrings, index, typeCount) => `${fileName.replace('.js', '')}.${extractedStrings[index].type}.index(${typeCount - 1})`;
 
@@ -121,7 +55,7 @@ const writeToJsonFileWithIndentation = (jsonFileName, jsonFileContent) => {
   fs.writeFileSync(jsonFileName, JSON.stringify(jsonFileContent, null, 4));
 };
 
-const getParsedTree = (jsFileContent) => {
+exports.getParsedTree = (jsFileContent) => {
   const parseTree = babelParser.parse(jsFileContent, {
     presets: ['@babel/preset-react'],
     plugins: ['@babel/plugin-proposal-class-properties'],
@@ -133,7 +67,7 @@ exports.extractStrings = (jsFileContent) => {
   const parser = new Parser();
   parser.jsContent = jsFileContent;
   const nodeProcessors = {
-    parsedTree: parser.getParsedTree(jsFileContent),
+    parsedTree: exports.getParsedTree(jsFileContent),
     processedObject: [],
     jsxTextNodeProcessor(path, extractedStringsWithTypeAndPath) {
       const nodePath = getNodePath(path);
@@ -141,14 +75,12 @@ exports.extractStrings = (jsFileContent) => {
         constructStringObject(nodePath, path.node.value.toString(), JSX_TEXT_TYPE),
       );
     },
-
     jsxExpressionContainerNodeProcessor(path, extractedStringsWithTypeAndPath) {
       const nodePath = getNodePath(path);
       extractedStringsWithTypeAndPath.push(
         constructStringObject(nodePath, path.node.extra.rawValue, JSX_EXPRESSION_TYPE),
       );
     },
-
     jsxTitleAttributeNodeProcessor(path, extractedStringsWithTypeAndPath) {
       const nodePath = getNodePath(path);
       extractedStringsWithTypeAndPath.push(
@@ -188,56 +120,11 @@ exports.extractStrings = (jsFileContent) => {
   };
   const traverser = new Traverser(nodeProcessors, {});
   return traverser.traverseAndProcessAbstractSyntaxTree();
-  // return traverseAndProcessAbstractSyntaxTree(jsFileContent, nodeProcessors);
 };
 
 const writeToFile = (jsFileName, newFileContent) => {
   fs.writeFileSync(jsFileName, newFileContent.code);
 };
-
-function createReplacementCasesHandlers(parsedTree, extractedStringsWithKeyAndPath) {
-  const nodeProcessors = {
-    parsedTree,
-    processedObject: extractedStringsWithKeyAndPath,
-    jsxTextNodeProcessor(path, extractedStringsWithKeyAndPath) {
-      path.node.value = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
-      extractedStringsWithKeyAndPath.shift();
-    },
-    jsxExpressionContainerNodeProcessor(path, extractedStringsWithKeyAndPath) {
-      path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-      extractedStringsWithKeyAndPath.shift();
-    },
-    jsxTitleAttributeNodeProcessor(path, extractedStringsWithKeyAndPath, isAnExpression) {
-      if (isAnExpression) {
-        path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-      } else {
-        path.node.extra.raw = `{I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
-      }
-      extractedStringsWithKeyAndPath.shift();
-    },
-    templateElementNodeProcessor(path, extractedStringsWithKeyAndPath) {
-      path.node.value.raw = `\${I18n.t("${extractedStringsWithKeyAndPath[0].key}")}`;
-      extractedStringsWithKeyAndPath.shift();
-    },
-    conditionalExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
-      path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-      extractedStringsWithKeyAndPath.shift();
-    },
-    objectPropertyNodeProcessor(path, extractedStringsWithKeyAndPath) {
-      path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-      extractedStringsWithKeyAndPath.shift();
-    },
-    callExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
-      path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-      extractedStringsWithKeyAndPath.shift();
-    },
-    returnExpressionNodeProcessor(path, extractedStringsWithKeyAndPath) {
-      path.node.extra.raw = `I18n.t("${extractedStringsWithKeyAndPath[0].key}")`;
-      extractedStringsWithKeyAndPath.shift();
-    },
-  };
-  return nodeProcessors;
-}
 
 function generateNewFileContent(parsedTree, fileContent) {
   return babelGenerator.default(parsedTree, { sourceMap: true }, fileContent);
@@ -250,22 +137,23 @@ function createNewJSFileFromTree(parsedTree, fileContent, jsFilePath) {
 }
 
 exports.replaceStringsWithKeys = (fileContent, jsFileName, jsonFileName, jsFilePath = `output/${jsFileName}`) => {
-  const extractedStrings = exports.extractStrings(fileContent);
+  const parsedTree = exports.getParsedTree(fileContent);
+  const extractNodeProcessors = NodeProcessors.createExtractCasesHandlers(parsedTree);
+  const extractTraverser = new Traverser(extractNodeProcessors, {});
+  const extractedStrings = extractTraverser.traverseAndProcessAbstractSyntaxTree();
+
+  if (!extractedStrings.length) {
+    return fileContent;
+  }
   const extractedStringsWithKeyAndPath = exports.writeToJsonFile(
     jsonFileName,
     jsFileName,
     extractedStrings,
   );
-  const parsedTree = getParsedTree(fileContent);
-  if (!extractedStrings.length) {
-    return fileContent;
-  }
-  const nodeProcessors = createReplacementCasesHandlers(parsedTree, extractedStringsWithKeyAndPath);
-
-  const traverser = new Traverser(nodeProcessors, {});
+  const replacementNodeProcessors = NodeProcessors
+    .createReplacementCasesHandlers(parsedTree, extractedStringsWithKeyAndPath);
+  const traverser = new Traverser(replacementNodeProcessors, {});
   traverser.traverseAndProcessAbstractSyntaxTree();
-
-  // traverseAndProcessAbstractSyntaxTree(fileContent, nodeProcessors);
   const newFileContent = createNewJSFileFromTree(parsedTree, fileContent, jsFilePath);
   return newFileContent.code;
 };
