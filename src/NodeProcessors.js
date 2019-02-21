@@ -17,7 +17,7 @@ const constructStringObject = (textKey, extractedText, stringType) => ({
 });
 
 exports.createExtractCasesHandlers = (parsedTree) => {
-  const nodeProcessors = {
+  return {
     parsedTree,
     processedObject: [],
     jsxTextNodeProcessor(path, extractedStringsWithTypeAndPath) {
@@ -69,10 +69,9 @@ exports.createExtractCasesHandlers = (parsedTree) => {
       );
     },
   };
-  return nodeProcessors;
 };
 exports.createReplacementCasesHandlers = (parsedTree, extractedStringsWithKeyAndPath) => {
-  const nodeProcessors = {
+  return {
     parsedTree,
     processedObject: extractedStringsWithKeyAndPath,
     jsxTextNodeProcessor(path, extractedStringsWithKeyAndPath) {
@@ -112,5 +111,4 @@ exports.createReplacementCasesHandlers = (parsedTree, extractedStringsWithKeyAnd
       extractedStringsWithKeyAndPath.shift();
     },
   };
-  return nodeProcessors;
 };
