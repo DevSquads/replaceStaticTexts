@@ -3,7 +3,6 @@
           prefer-destructuring: 0
 */
 
-
 const expect = require('chai').expect;
 const fs = require('fs');
 const parser = require('../parse');
@@ -16,21 +15,18 @@ const jsonTestFileName = 'test.json';
 const jsTestFileName = 'test.js';
 const JS_TEST_FILE_NAME = 'TestScreen.js';
 
-const getOriginalFileContent = renderContent => 'import React from "react";\n'
-  + 'class TestClass extends React.Component {\n'
-  + renderContent
-  + '  }\n';
+const getOriginalFileContent = renderContent => `${'import React from "react";\n'
+  + 'class TestClass extends React.Component {\n'}${
+  renderContent
+}  }\n`;
 
-const getModifiedFileContent = modifiedRenderContent => 'import React from "react";\n'
+const getModifiedFileContent = modifiedRenderContent => `${'import React from "react";\n'
   + 'import I18n from "../services/internationalizations/i18n";\n\n'
-  + 'class TestClass extends React.Component {\n'
-  + modifiedRenderContent
-  + '}';
+  + 'class TestClass extends React.Component {\n'}${
+  modifiedRenderContent
+}}`;
 
 function testParsedFileWithExpectedContent(originalInput, expectedOutput) {
-  // const originalInput = getOriginalFileContent(originalRenderContent);
-  // const expectedOutput = getModifiedFileContent(expectedRenderContent);
-
   fs.writeFileSync(jsonTestFileName, '{}');
 
   let jsFileContentWithReplacedKeys = parser
@@ -43,7 +39,6 @@ function testParsedFileWithExpectedContent(originalInput, expectedOutput) {
 }
 
 describe('Extract And Replace Script', () => {
-
   afterEach(() => {
     if (fs.existsSync(jsonTestFileName)) {
       fs.unlinkSync(jsonTestFileName);
@@ -135,9 +130,6 @@ describe('Extract And Replace Script', () => {
         + '  }\n'
         + '}';
       fs.writeFileSync(jsonTestFileName, '{}');
-      // const parseTree = parser.getParsedTree(originalFileContentWithATitleProp);
-      // const nodeProcessors = NodeProcessors.createExtractCasesHandlers(parseTree, {});
-      // const extractedStrings = new Traverser(nodeProcessors).traverseAndProcessAbstractSyntaxTree();
       const extractedStrings = parser.extractStrings(originalFileContentWithATitleProp);
 
       expect(extractedStrings).to.deep.contain({
@@ -656,7 +648,10 @@ describe('Extract And Replace Script', () => {
         + '  }\n'
         + '\n';
 
-      testParsedFileWithExpectedContent(getOriginalFileContent(originalRenderContent), getModifiedFileContent(expectedRenderContent));
+      testParsedFileWithExpectedContent(
+        getOriginalFileContent(originalRenderContent),
+        getModifiedFileContent(expectedRenderContent),
+      );
     });
 
     it('should replace the extracted ExpressionText strings with generated key', () => {
@@ -677,7 +672,10 @@ describe('Extract And Replace Script', () => {
         + '\n';
 
 
-      testParsedFileWithExpectedContent(getOriginalFileContent(originalRenderContent), getModifiedFileContent(expectedRenderContent));
+      testParsedFileWithExpectedContent(
+        getOriginalFileContent(originalRenderContent),
+        getModifiedFileContent(expectedRenderContent),
+      );
     });
 
     it('should replace texts inside title prop with an expression', () => {
@@ -701,7 +699,10 @@ describe('Extract And Replace Script', () => {
         + '  }\n'
         + '\n';
 
-      testParsedFileWithExpectedContent(getOriginalFileContent(originalRenderContent), getModifiedFileContent(expectedRenderContent));
+      testParsedFileWithExpectedContent(
+        getOriginalFileContent(originalRenderContent),
+        getModifiedFileContent(expectedRenderContent),
+      );
     });
 
     it('should replace texts inside title prop without an expression', () => {
@@ -725,7 +726,10 @@ describe('Extract And Replace Script', () => {
         + '  }\n'
         + '\n';
 
-      testParsedFileWithExpectedContent(getOriginalFileContent(originalRenderContent), getModifiedFileContent(expectedRenderContent));
+      testParsedFileWithExpectedContent(
+        getOriginalFileContent(originalRenderContent),
+        getModifiedFileContent(expectedRenderContent),
+      );
     });
 
     it('should replace texts inside an interpolated string', () => {
@@ -755,14 +759,14 @@ describe('Extract And Replace Script', () => {
 
     it('should replace texts inside conditional statement', () => {
       const originalClassAttributeText = '  someObject = someCondition ? [\'consequent text\'] : [\'alternate text\'];';
-      const expectedClassAttributeText = '  someObject = someCondition ? [I18n.t("TestScreen.ConditionalExpression.index(0)")] : [I18n.t("TestScreen.ConditionalExpression.index(1)")];\n\n'
+      const expectedClassAttributeText = '  someObject = someCondition ? [I18n.t("TestScreen.ConditionalExpression.index(0)")] : [I18n.t("TestScreen.ConditionalExpression.index(1)")];\n\n';
 
-      const originalFileContentWithATitleProp = getOriginalFileContent(originalClassAttributeText + '  render() {\n'
+      const originalFileContentWithATitleProp = getOriginalFileContent(`${originalClassAttributeText}  render() {\n`
         + '    return (\n'
         + '    <View></View>\n'
         + '    );\n'
         + '  }\n');
-      const expectedFileContent = getModifiedFileContent(expectedClassAttributeText + '  render() {\n'
+      const expectedFileContent = getModifiedFileContent(`${expectedClassAttributeText}  render() {\n`
         + '    return <View></View>;\n'
         + '  }\n'
         + '\n');
@@ -784,7 +788,10 @@ describe('Extract And Replace Script', () => {
         + '  }\n'
         + '\n');
 
-      testParsedFileWithExpectedContent(originalWithAnAttributeInsideObject, expectedContentWithAnAttributeInsideObject);
+      testParsedFileWithExpectedContent(
+        originalWithAnAttributeInsideObject,
+        expectedContentWithAnAttributeInsideObject,
+      );
     });
 
     it('should replace texts inside state assignment statement', () => {
@@ -818,7 +825,10 @@ describe('Extract And Replace Script', () => {
         + '  }\n\n'
         + '}';
 
-      testParsedFileWithExpectedContent(originalFileContentWithAStateAssignment, expectedFileContent);
+      testParsedFileWithExpectedContent(
+        originalFileContentWithAStateAssignment,
+        expectedFileContent,
+      );
     });
 
     it('should replace text in object declaration in side variable declaration ', () => {
@@ -843,7 +853,10 @@ describe('Extract And Replace Script', () => {
         + '    return <View></View>;\n'
         + '  }\n\n'
         + '}';
-      testParsedFileWithExpectedContent(originalfileContentWithVariableDeclaration, expectedfileContentWithVariableDeclaration);
+      testParsedFileWithExpectedContent(
+        originalfileContentWithVariableDeclaration,
+        expectedfileContentWithVariableDeclaration,
+      );
     });
 
     it('should replace text in array declaration in side variable declaration ', () => {
@@ -865,7 +878,10 @@ describe('Extract And Replace Script', () => {
         + '    return <View></View>;\n'
         + '  }\n\n'
         + '}';
-      testParsedFileWithExpectedContent(originalfileContentWithVariableDeclaration, expectedfileContentWithVariableDeclaration);
+      testParsedFileWithExpectedContent(
+        originalfileContentWithVariableDeclaration,
+        expectedfileContentWithVariableDeclaration,
+      );
     });
 
     // TODO What is it used for
@@ -952,7 +968,10 @@ describe('Extract And Replace Script', () => {
         + '  }\n\n'
         + '}';
 
-      testParsedFileWithExpectedContent(originalJsWithLiteralInReturnStatement, expectedFileContent);
+      testParsedFileWithExpectedContent(
+        originalJsWithLiteralInReturnStatement,
+        expectedFileContent,
+      );
     });
 
     it('should replace text inside method statement', () => {
