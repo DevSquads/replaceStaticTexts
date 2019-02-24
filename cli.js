@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const path = require('path');
 const core = require('./src/core');
 
@@ -7,4 +9,4 @@ const main = () => {
   core.applyParseOnDirectory(rootDirectory, jsonFilePath);
 };
 
-// main();
+main();

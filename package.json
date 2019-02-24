@@ -1,7 +1,11 @@
 {
-  "name": "parser-test",
+  "name": "textractor-react",
   "version": "1.0.0",
   "description": "",
+  "main": "index.js",
+  "bin": {
+    "textract": "./cli.js"
+  },
   "scripts": {
     "start": "node app.js",
     "test": "mocha src/tests/*.test.js",
@@ -20,10 +24,7 @@
     "@babel/types": "^7.2.0",
     "babel-generator": "^6.26.1",
     "babel-traverse": "^6.26.0",
-    "chai": "^4.2.0",
-    "mocha": "^5.2.0",
     "readdirp": "^2.2.1",
-    "terser": "^3.14.1",
     "tree-flatten": "^1.0.0",
     "unbend": "^2.1.2"
   },
@@ -41,6 +42,8 @@
     "eslint-plugin-import": "^2.14.0",
     "eslint-plugin-jsx-a11y": "^6.1.2",
     "eslint-plugin-react": "^7.12.4",
+    "chai": "^4.2.0",
+    "mocha": "^5.2.0",
     "jshint": "^2.10.0",
     "jshint-loader": "^0.8.4",
     "mocha-junit-reporter": "^1.18.0",
