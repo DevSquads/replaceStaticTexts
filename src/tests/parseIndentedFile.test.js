@@ -11,7 +11,6 @@ const Parser = require('../Parser');
 
 
 describe('Parser Indented Files', () => {
-
   const parserObject = new Parser();
 
 
@@ -45,7 +44,7 @@ describe('Parser Indented Files', () => {
   });
 
 
-  xit('should keep the indentation of "return" block ', () => {
+  it.skip('should keep the indentation of "return" block ', () => {
     const originalFileContentWithATitleProp = 'import React from "react";\n'
       + 'class TestClass extends React.Component {\n'
       + '  render() {\n'
@@ -156,5 +155,4 @@ describe('Parser Indented Files', () => {
 
     expect(returnedFileContent).to.eql(originalFileContent);
   });
-
 });

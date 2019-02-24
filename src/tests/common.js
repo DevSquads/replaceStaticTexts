@@ -6,12 +6,12 @@ const fs = require('fs');
 const Parser = require('../Parser');
 const parser = require('../parse');
 
-const JS_TEST_FILE_NAME = 'TestScreen.js';
+const testFileName = 'TestScreen.js';
 
 const parserObject = new Parser();
 
 
-const jsonTestFileName = 'test.json';
+const jsonKeysFile = 'test.json';
 
 const getOriginalFileContent = renderContent => `${'import React from "react";\n'
 + 'class TestClass extends React.Component {\n'}${
@@ -26,11 +26,11 @@ const getModifiedFileContent = modifiedRenderContent => `${'import React from "r
 
 
 function testParsedFileWithExpectedContent(originalInput, expectedOutput) {
-  fs.writeFileSync(jsonTestFileName, '{}');
+  fs.writeFileSync(jsonKeysFile, '{}');
 
   let jsFileContentWithReplacedKeys = parser
     .replaceStringsWithKeys(originalInput,
-      JS_TEST_FILE_NAME, jsonTestFileName);
+      testFileName, jsonKeysFile);
   parserObject.jsContent = jsFileContentWithReplacedKeys;
   jsFileContentWithReplacedKeys = parserObject.writeImportStatementToJSContent();
 
@@ -41,7 +41,7 @@ module.exports = {
   getOriginalFileContent,
   getModifiedFileContent,
   testParsedFileWithExpectedContent,
-  JS_TEST_FILE_NAME,
-  jsonTestFileName,
+  testFileName,
+  jsonKeysFile,
 
 };
