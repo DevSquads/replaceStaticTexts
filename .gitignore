@@ -8,3 +8,4 @@ TestScreen.js
 .history
 test-results.xml
 output-tree.json
+.circleci/config.yml

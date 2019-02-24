@@ -2,7 +2,6 @@ const fileSystemUtil = require('fs');
 
 const walkSync = (dir, fileList) => {
   const files = fileSystemUtil.readdirSync(dir);
-  fileList = fileList || [];
   files.forEach((file) => {
     if (fileSystemUtil.statSync(`${dir}/${file}`).isDirectory()) {
       fileList = walkSync(`${dir}/${file}`, fileList);
