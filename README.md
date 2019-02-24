@@ -1,5 +1,4 @@
-# Textractor-react  [![Build CircleCI](https://circleci.com/gh/DevSquads/replaceStaticTexts/tree/master.svg?style=svg)](https://circleci.com/gh/DevSquads/replaceStaticTexts/tree/master)
-
+# Textractor-react  &middot; [![Circle CI Status](https://circleci.com/gh/DevSquads/replaceStaticTexts.svg?style=shield)](https://circleci.com/gh/DevSquads/replaceStaticTexts) [![npm version](https://badge.fury.io/js/textractor-react.svg)](https://badge.fury.io/js/textractor-react) 
 
 Extracting and replacing texts for internationalization is a tedious task with a lot of manual work that is prone to human error. Using this script saves you all that work and removes human error completely.
 
