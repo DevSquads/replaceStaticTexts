@@ -17,7 +17,7 @@ const constructStringObject = (textKey, extractedText, stringType) => ({
   value: cleanUpIndentation(extractedText),
 });
 
-export const createExtractCasesHandlers = parsedTree => ({
+exports.createExtractCasesHandlers = parsedTree => ({
   parsedTree,
   processedObject: [],
   jsxTextNodeProcessor(path, extractedStringsWithTypeAndPath) {
@@ -69,7 +69,7 @@ export const createExtractCasesHandlers = parsedTree => ({
     );
   },
 });
-export const createReplacementCasesHandlers = (parsedTree, extractedStringsWithKeyAndPath) => ({
+exports.createReplacementCasesHandlers = (parsedTree, extractedStringsWithKeyAndPath) => ({
   parsedTree,
   processedObject: extractedStringsWithKeyAndPath,
   jsxTextNodeProcessor(path, extractedStringsWithKeyAndPath) {
