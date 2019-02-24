@@ -1,4 +1,4 @@
-/* eslint-disable no-shadow*/
+/* eslint-disable no-shadow */
 const babelTraverse = require('@babel/traverse');
 const fs = require('fs');
 

@@ -1,3 +1,4 @@
+/* eslint-disable no-shadow, no-param-reassign */
 const JSX_TEXT_TYPE = 'JSXText';
 const JSX_EXPRESSION_TYPE = 'JSXExpressionContainer';
 const JSX_ATTRIBUTE_TYPE = 'JSXAttribute';
@@ -16,7 +17,7 @@ const constructStringObject = (textKey, extractedText, stringType) => ({
   value: cleanUpIndentation(extractedText),
 });
 
-exports.createExtractCasesHandlers = parsedTree => ({
+export const createExtractCasesHandlers = parsedTree => ({
   parsedTree,
   processedObject: [],
   jsxTextNodeProcessor(path, extractedStringsWithTypeAndPath) {
@@ -68,7 +69,7 @@ exports.createExtractCasesHandlers = parsedTree => ({
     );
   },
 });
-exports.createReplacementCasesHandlers = (parsedTree, extractedStringsWithKeyAndPath) => ({
+export const createReplacementCasesHandlers = (parsedTree, extractedStringsWithKeyAndPath) => ({
   parsedTree,
   processedObject: extractedStringsWithKeyAndPath,
   jsxTextNodeProcessor(path, extractedStringsWithKeyAndPath) {
