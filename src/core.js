@@ -3,6 +3,9 @@ const path = require('path');
 const parser = require('./parse');
 
 const findAllJSFilesInADirectory = (dir) => {
+  if (!fileSystemUtil.statSync(`${dir}`).isDirectory()) {
+    return [dir];
+  }
   const files = fileSystemUtil.readdirSync(dir);
   const fileList = [];
   files.forEach((file) => {

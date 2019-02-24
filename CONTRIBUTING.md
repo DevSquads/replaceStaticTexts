@@ -1,8 +1,8 @@
-# Contributing to [PROJECT NAME]
+# Contributing to Textractor-react
 
 :+1::tada: First off, thanks for taking the time to contribute! :tada::+1:
 
-The following is a set of guidelines for contributing to [PROJECT NAME]. These are mostly guidelines, not rules. Use your best judgment, and feel free to propose changes to this document in a pull request.
+The following is a set of guidelines for contributing to Textractor-react. These are mostly guidelines, not rules. Use your best judgment, and feel free to propose changes to this document in a pull request.
 
 #### Table Of Contents
 
@@ -30,14 +30,14 @@ This project and everyone participating in it is governed by the [Code of Conduc
 
 ### About the project
 Extracting and replacing texts for internationalization is a tedious task with a lot of manual work that is prone to human error.  
-Using [PROJECT NAME] saves you all that work and removes human error completely.
+Using Textractor-react saves you all that work and removes human error completely.
 
 
 ## How Can I Contribute?
 
 ### Reporting Bugs
 
-This section guides you through submitting a bug report for [PROJECT NAME]. Following these guidelines helps maintainers and the community understand your report :pencil:, reproduce the behavior :computer: :computer:, and find related reports :mag_right:.
+This section guides you through submitting a bug report for Textractor-react. Following these guidelines helps maintainers and the community understand your report :pencil:, reproduce the behavior :computer: :computer:, and find related reports :mag_right:.
 
 Before creating bug reports, please check the previous issues as you might find out that you don't need to create one. When you are creating a bug report, please [include as many details as possible](#how-do-i-submit-a-good-bug-report). You can fill out [the required template](ISSUE_TEMPLATE.md).
 
@@ -68,9 +68,9 @@ Both issue lists are sorted by total number of comments. While not perfect, numb
 
 The process described here has several goals:
 
-- Maintain [PROJECT NAME] quality
+- Maintain Textractor-react quality
 - Fix problems that are important to users
-- Engage the community in working toward the best possible toward [PROJECT NAME]
+- Engage the community in working toward the best possible toward Textractor-react
 - Enable a sustainable system for Atom's maintainers to review contributions
 
 Please follow these steps to have your contribution considered by the maintainers:
