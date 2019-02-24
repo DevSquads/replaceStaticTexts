@@ -36,7 +36,7 @@ class Traverser {
 
     function isVisited(path) {
       if (!visitedNodePaths[getNodePath(path)]) {
-        visitedNodePaths[getNodePath(path)] = true;
+        visitedNodePaths[getNodePath(path)] = true; // eslint-disable-line
         return false;
       }
       return true;

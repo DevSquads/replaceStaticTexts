@@ -1,5 +1,4 @@
 const fileSystemUtil = require('fs');
-const path = require('path');
 const parser = require('./parse');
 
 const findAllJSFilesInADirectory = (dir) => {
